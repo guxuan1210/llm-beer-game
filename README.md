@@ -170,8 +170,8 @@ Each round:
 ### Installation
 
 ```bash
-git clone https://github.com/your-org/llm-beer-game.git
-cd "supply chain with agent_adjusted"
+git clone https://github.com/guxuan1210/llm-beer-game.git
+cd llm-beer-game
 pip install -r requirements.txt
 ```
 
@@ -334,7 +334,7 @@ python -m llm_beer_game.main run --verbose
 ## Project Structure
 
 ```
-supply chain with agent_adjusted/
+llm-beer-game/
 ├── README.md
 ├── requirements.txt              # Python dependencies
 ├── run_web_ui.py                 # Streamlit launcher script
