@@ -549,18 +549,6 @@ class GameConfig:
     # LLM configuration
     llm: LLMConfig = field(default_factory=LLMConfig)
 
-    # Coordinator LLM configuration
-    coordinator_llm_provider: str = "Ollama"
-    coordinator_model_name: str = "gemma3:27b"
-    coordinator_base_url: str = "http://localhost:11434"
-    coordinator_api_key: Optional[str] = None
-    coordinator_timeout: int = 60  # Extended coordinator timeout
-
-    # Coordinator prompt configuration
-    coordinator_analysis_prompt: Optional[str] = None
-    coordinator_guidance_prompt: Optional[str] = None
-    coordinator_mindmap_prompt: Optional[str] = None
-
     # Simulation configuration
     simulation: SimulationConfig = field(default_factory=SimulationConfig)
 
@@ -795,10 +783,6 @@ class ConfigManager:
             manufacturer=AgentConfig(**manufacturer_data),
             demand=DemandConfig(**demand_data),
             llm=LLMConfig(**config_dict.get('llm', {})),
-            coordinator_llm_provider=config_dict.get('coordinator_llm_provider', 'Ollama'),
-            coordinator_model_name=config_dict.get('coordinator_model_name', 'gemma3:27b'),
-            coordinator_base_url=config_dict.get('coordinator_base_url', 'http://localhost:11434'),
-            coordinator_api_key=config_dict.get('coordinator_api_key'),
             simulation=SimulationConfig(**config_dict.get('simulation', {})),
             adaptive_limits=AdaptiveLimitsConfig.from_dict(adaptive_limits_data) if adaptive_limits_data else AdaptiveLimitsConfig(),
             name=config_dict.get('name', 'Default Config'),

@@ -102,16 +102,6 @@ class BeerGameVisualizer:
         ax1.plot(weeks[:-1], distributor_orders[:-1] if len(distributor_orders) > 1 else [],
                  label='Distributor', color=self.colors['distributor'], linewidth=2)
 
-        # Add coordinator suggestion markers
-        if hasattr(simulation_result, 'coordination_history') and simulation_result.coordination_history:
-            for coord_data in simulation_result.coordination_history:
-                round_num = coord_data.get('round', 0)
-                if 1 <= round_num <= len(weeks):
-                    # Mark coordinator suggestion position on chart
-                    ax1.axvline(x=round_num, color='purple', linestyle='--', alpha=0.5, linewidth=1)
-                    ax1.text(round_num, ax1.get_ylim()[1], '📋', ha='center', va='bottom', 
-                            fontsize=10, color='purple', fontweight='bold')
-        
         ax1.set_xlabel('Week')
         ax1.set_ylabel('Quantity')
         ax1.set_title('Demand vs. Orders')

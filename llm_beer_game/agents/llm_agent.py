@@ -33,15 +33,13 @@ class LLMAgent(BaseAgent):
         self.temperature = temperature
         self.max_tokens = max_tokens
 
-        # Coordinator guidance
-        self.coordinator_guidance = None
-
         # Decision history
         self.decision_history = []
         self.demand_signal_history = []
 
         # Store last reasoning process
         self.last_reasoning = ""
+        self.last_raw_response = ""
 
         # Decision explanation
         self.last_decision_explanation = ""
@@ -62,6 +60,39 @@ class LLMAgent(BaseAgent):
 
     def _create_system_prompt(self) -> str:
         """Create system prompt"""
+        holding = getattr(self.config, self.role).cost_config.holding_cost
+        backorder = getattr(self.config, self.role).cost_config.backorder_cost
+        ratio = backorder / holding
+
+        # Role-specific strategic guidance
+        role_guidance = {
+            'retailer': """=== Your Role: Retailer ===
+You face end-customer demand directly. Your advantage is seeing real market signals without upstream amplification.
+- Focus on demand forecasting accuracy — use historical demand patterns to anticipate future needs
+- Maintain adequate safety stock because you directly bear backorder costs from customer-facing shortages
+- Avoid over-ordering when demand spikes temporarily — distinguish signal from noise
+- Your orders directly influence the entire supply chain upstream — stabilize your ordering pattern""",
+            'wholesaler': """=== Your Role: Wholesaler ===
+You sit between retailer and distributor. Your demand is the retailer's orders, which may be amplified.
+- Be aware that retailer orders may already contain bullwhip amplification — do not amplify further
+- Monitor whether retailer orders exceed end-customer demand (if information sharing is enabled)
+- Balance your inventory against the retailer's ability to absorb shipments
+- Consider the distributor's supply reliability when determining your safety stock level""",
+            'distributor': """=== Your Role: Distributor ===
+You are furthest from the end customer. Your demand signals pass through two stages of potential amplification.
+- Your demand (wholesaler orders) may be significantly amplified — apply dampening to your orders
+- Pay close attention to total chain inventory levels to gauge overall supply-demand balance
+- Consider both upstream (manufacturer production capacity) and downstream (wholesaler demand) constraints
+- Prioritize supply chain stability over aggressive cost minimization""",
+            'manufacturer': """=== Your Role: Manufacturer ===
+You produce goods with a production lead time. You do not simply order — you plan production.
+- Production takes {plt} periods — you must forecast demand {plt} periods ahead
+- Raw materials and production capacity are assumed unlimited, but production time is fixed
+- Use the production pipeline (WIP) to smooth output — avoid frequent large changes in production quantity
+- Your production decisions determine the entire supply chain's supply capability — prioritize stability
+- Consider the full pipeline: inventory + WIP covers demand over the production lead time horizon""".format(plt=self.production_lead_time),
+        }
+
         return f"""You are a {self.role} in a supply chain making ordering decisions.
 
 === Identity and Responsibilities ===
@@ -71,9 +102,27 @@ Your core responsibility is to minimize total costs while meeting downstream dem
 === Core Objectives ===
 Primary goal: Cost minimization
 - Total cost = Holding cost + Backorder cost
-- Holding cost: {getattr(self.config, self.role).cost_config.holding_cost} yuan per unit per period
-- Backorder cost: {getattr(self.config, self.role).cost_config.backorder_cost} yuan per unit per period
-- Key tradeoff: Backorder cost is {getattr(self.config, self.role).cost_config.backorder_cost/getattr(self.config, self.role).cost_config.holding_cost:.1f}x holding cost, balance carefully
+- Holding cost: {holding} yuan per unit per period
+- Backorder cost: {backorder} yuan per unit per period
+- Key tradeoff: Backorder cost is {ratio:.1f}x holding cost, balance carefully
+
+=== Strategic Framework: Dual-Horizon Supply-Demand Balance ===
+Make decisions by evaluating TWO time horizons:
+
+SHORT-TERM (current period):
+- Net position = inventory + incoming_shipment_this_period - backorders - current_demand
+- Can you meet immediate demand? A negative net position means stockout this period.
+- Short-term shortage is more costly (backorder_cost = {ratio:.1f}x holding_cost)
+
+LONG-TERM (over effective lead time = {self.lead_time} periods):
+- Total supply = inventory + all in-transit/WIP arriving within lead time
+- Total expected demand = average_demand × lead_time periods
+- Coverage ratio = total_supply / total_expected_demand
+- Ratio > 1.5: oversupply risk (bullwhip amplification) — consider reducing orders
+- Ratio < 1.0: undersupply risk — need to increase orders to avoid persistent backorders
+- Target ratio: 1.1-1.3 (slight buffer to handle demand variability)
+
+{role_guidance.get(self.role, '')}
 
 === Supply Chain Environment ===
 Operating environment:
@@ -86,10 +135,11 @@ Operating environment:
 
 === Decision Task ===
 You need to make an ordering decision based on current state information:
-1. Analyze current inventory, backorders, and in-transit orders
-2. Evaluate historical demand trends and cost changes
-3. Weigh holding costs against backorder risk
-4. Determine the optimal order quantity to minimize total cost
+1. Assess short-term position: Can you meet current demand? What is the immediate net inventory?
+2. Assess long-term balance: Over the lead time horizon, is supply adequate relative to expected demand?
+3. Evaluate historical demand trends and cost patterns
+4. Weigh holding costs against backorder risk, accounting for the {ratio:.1f}x cost ratio
+5. Determine the optimal order quantity to minimize total cost while maintaining supply-demand balance
 
 === Output Format Requirements ===
 CRITICAL REQUIREMENT - OUTPUT FORMAT:
@@ -98,13 +148,15 @@ You must strictly follow these requirements:
 1. Output ONLY a single JSON object, without any other text, explanation, or reasoning process
 2. Use exact format: {{"order_decision": <number>, "reasoning": "<text>"}}
 3. "order_decision" must be a non-negative integer (0 or greater)
-4. "reasoning" should be a brief explanation in English (10-30 characters)
+4. "reasoning" must explain your decision concisely (50-150 characters), addressing:
+   - Current net inventory position (short-term)
+   - Supply-demand balance over lead time (long-term)
+   - Why this order quantity is appropriate
 
 Correct output examples:
-{{"order_decision": 5, "reasoning": "Stock low, need replenishment"}}
-{{"order_decision": 12, "reasoning": "Demand rising, increase order"}}
-{{"order_decision": 0, "reasoning": "Stock sufficient, skip order"}}
-{{"order_decision": 8, "reasoning": "Balance cost and risk"}}
+{{"order_decision": 5, "reasoning": "Net inv 3, short-term OK. LT coverage 0.8 — need to rebuild pipeline. Order slightly above demand to restore balance."}}
+{{"order_decision": 0, "reasoning": "Net inv 12, LT coverage 1.5 — oversupplied. Skip order to let pipeline drain and reduce holding costs."}}
+{{"order_decision": 8, "reasoning": "Net inv -2, immediate shortage. LT coverage 0.6 — urgent replenishment needed. Order covers demand plus backorder recovery."}}
 
 Incorrect output examples (PROHIBITED):
 - Plain number: 5
@@ -117,7 +169,36 @@ Important reminders:
 - Do NOT add any extra explanatory text
 - Output the JSON object directly, nothing else
 - Ensure the JSON format is complete and parseable
+- Your reasoning field should reference specific numbers from the data provided
         """
+
+    def _generate_correct_examples(self) -> str:
+        """Generate constraint-aware CORRECT examples based on current min/max limits"""
+        agent_config = getattr(self.config, self.role)
+        min_q = getattr(agent_config, 'min_order_quantity', None)
+        max_q = getattr(agent_config, 'max_order_quantity', None)
+        min_val = min_q if min_q is not None else 0
+        max_val = max_q if max_q is not None else 20
+        mid_val = (min_val + max_val) // 2
+        low_val = max(min_val, min_val + (max_val - min_val) // 4)
+        zero_allowed = (min_q is None or min_q == 0)
+
+        role_term = "production" if self.role == 'manufacturer' else "orders"
+        action = "producing" if self.role == 'manufacturer' else "ordering"
+
+        examples = []
+        if zero_allowed:
+            examples.append(f'{{{{"decision": 0, "reason": "overstock — pausing {role_term} at minimum (0)"}}}}')
+        else:
+            examples.append(f'{{{{"decision": {min_val}, "reason": "overstock — {action} at minimum ({min_val})"}}}}')
+        examples.append(f'{{{{"decision": {max_val}, "reason": "shortage — {action} at maximum ({max_val})"}}}}')
+        examples.append(f'{{{{"decision": {mid_val}, "reason": "balanced — {action} near midpoint ({mid_val})"}}}}')
+        if zero_allowed and low_val > 0:
+            examples.append(f'{{{{"decision": {low_val}, "reason": "sufficient inventory — light {role_term} at low end ({low_val})"}}}}')
+        elif not zero_allowed and low_val > min_val:
+            examples.append(f'{{{{"decision": {low_val}, "reason": "sufficient inventory — light {role_term} near minimum ({low_val})"}}}}')
+
+        return "\n".join(examples)
 
     def _create_user_prompt(self, context: Dict[str, Any]) -> str:
         """Create user prompt"""
@@ -189,12 +270,62 @@ Important reminders:
 - Components: Order {olt} + Transport {tlt} + Production {plt}
 - Reminder: Please incorporate lead time components into your ordering decision"""
 
-        # Historical trend info
+        # Historical data (fetch early — needed for balance calculations)
+        demand_history = context.get('demand_history', [])
         recent_orders = context.get('recent_orders', [])
         recent_inventory = context.get('recent_inventory', [])
         recent_costs = context.get('recent_costs', [])
-        demand_history = context.get('demand_history', [])
         shipment_history = context.get('shipment_history', [])
+
+        # Constraint range (extract early, used by both balance sections)
+        agent_config = getattr(self.config, self.role)
+        min_q = getattr(agent_config, 'min_order_quantity', None)
+        max_q = getattr(agent_config, 'max_order_quantity', None)
+        min_str = str(min_q) if min_q is not None else "0"
+        max_str = str(max_q) if max_q is not None else "unlimited"
+
+        # === Short-term Supply-Demand Balance (current period) ===
+        net_inventory = inventory - backorders
+        short_term_supply = net_inventory + next_shipment
+        short_term_gap = short_term_supply - demand
+        st_status = "ADEQUATE" if short_term_gap >= demand else ("TIGHT" if short_term_gap >= 0 else "SHORTAGE")
+        prompt += f"""\n\n=== SHORT-TERM Balance (Current Period) ===
+- Net inventory (inv - backorder): {net_inventory} units
+- Next period arrival: {next_shipment} units
+- Available supply (net inv + next arrival): {short_term_supply} units
+- Current period demand: {demand} units
+- Short-term gap: {short_term_gap:+d} units — Status: {st_status}
+- Your order constraint: [{min_str}, {max_str}]
+- {'>> WARNING: Immediate shortage — backorder costs will be incurred! Consider ordering near MAX ({}) <<'.format(max_str) if short_term_gap < 0 else '>> Short-term position manageable — lean toward MIN ({}) if inventory is adequate <<'.format(min_str) if short_term_gap >= demand else 'Short-term position is tight — consider ordering above midpoint.'}"""
+
+        # === Long-term Supply-Demand Balance (over lead time horizon) ===
+        long_term_supply = inventory - backorders + total_in_transit
+        avg_demand = sum(demand_history) / len(demand_history) if demand_history else demand
+        expected_demand_lt = avg_demand * lt if lt > 0 else avg_demand
+        coverage_ratio = long_term_supply / expected_demand_lt if expected_demand_lt > 0 else float('inf')
+
+        # Constraint-aware order guidance
+
+        if coverage_ratio > 1.5:
+            lt_assessment = f"OVERSURPLUS — order at MINIMUM ({min_str}) to prevent bullwhip amplification"
+        elif coverage_ratio > 1.2:
+            lt_assessment = f"ADEQUATE — slight surplus, bias toward minimum ({min_str}) rather than maintaining current level"
+        elif coverage_ratio >= 1.0:
+            lt_assessment = f"BALANCED — supply matches expected demand, order near midpoint of [{min_str}, {max_str}]"
+        else:
+            lt_assessment = f"UNDERSUPPLY — order at MAXIMUM ({max_str}) to rebuild pipeline"
+
+        prompt += f"""\n\n=== LONG-TERM Balance (Over {lt}-Period Lead Time Horizon) ===
+- Net position (inventory - backorders): {inventory - backorders} units
+- Total supply over lead time: net position + total {'WIP' if self.role == 'manufacturer' else 'in-transit'} ({total_in_transit}) = {long_term_supply} units
+- Average demand per period: {avg_demand:.1f} units
+- Expected demand over {lt} periods: {expected_demand_lt:.1f} units
+- Coverage ratio: {coverage_ratio:.2f} — Assessment: {lt_assessment}
+- Your order constraint: [{min_str}, {max_str}]
+- Target coverage ratio: 1.1-1.3 (safety buffer for demand variability)
+- {'>> ACTION: Order at MINIMUM ({}) <<'.format(min_str) if coverage_ratio > 1.5 else '>> ACTION: Order at MAXIMUM ({}) <<'.format(max_str) if coverage_ratio < 1.0 else 'Long-term balance is within acceptable range — choose the lowest cost option within your constraint range.'}"""
+
+        # Historical trend info
 
         if recent_orders:
             prompt += f"""\n\n=== Historical Trend Info ===
@@ -232,14 +363,6 @@ Important reminders:
 - Average inventory level: {avg_inventory:.1f} units
 - Inventory trend: {inventory_trend}
 - Inventory adequacy: {'adequate' if inventory + total_in_transit >= demand * 2 else 'tight'}"""
-
-        # Add coordinator guidance info
-        if 'coordinator_guidance' in context and context['coordinator_guidance']:
-            guidance = context['coordinator_guidance']
-            # Check if guidance is empty or indicates no intervention needed
-            if guidance.strip() and "no intervention needed" not in guidance and guidance.strip() != "":
-                prompt += f"\n\n=== Coordinator Guidance ===\n{guidance}\n"
-                prompt += "Please incorporate the coordinator's guidance in your decision, especially when specific order quantities are provided.\n"
 
         # If information sharing is enabled, add global info
         if self.config.simulation.information_sharing and 'shared_info' in context:
@@ -499,15 +622,6 @@ Important reminders:
 
         return prompt
 
-    def set_coordinator_guidance(self, guidance: str):
-        """Set coordinator guidance"""
-        self.coordinator_guidance = guidance
-        self.logger.info(f"Received coordinator guidance: {guidance[:50]}...")
-
-    def get_coordinator_guidance(self) -> str:
-        """Get coordinator guidance"""
-        return self.coordinator_guidance if self.coordinator_guidance is not None else ""
-
     def get_last_reasoning(self) -> str:
         """Get the reasoning process of the last decision"""
         return self.last_reasoning
@@ -516,7 +630,6 @@ Important reminders:
         """Get decision details including reasoning process and decision result"""
         return {
             'reasoning': self.last_reasoning,
-            'coordinator_guidance': self.coordinator_guidance,
             'role': self.role
         }
 
@@ -542,8 +655,8 @@ Important reminders:
                 print(f"ERROR: [{self.role}] Response is empty, using fallback")
                 return self._fallback_decision()
 
-            # Save complete response as reasoning process (for later analysis)
-            self.last_reasoning = response
+            # Save complete response as raw response (for later analysis)
+            self.last_raw_response = response
 
             # Attempt to extract JSON portion from response (handling cases with reasoning content)
             cleaned_response = self._extract_json_from_response(response)
@@ -555,6 +668,7 @@ Important reminders:
             # If JSON parsing succeeded, save the reason explanation
             if order_quantity is not None and reason is not None:
                 self.last_decision_reason = reason
+                self.last_decision_explanation = reason
                 print(f"DEBUG: [{self.role}] JSON parsing succeeded - order quantity: {order_quantity}, reason: {reason}")
             else:
                 # Fallback: attempt number extraction (compatible with old format)
@@ -574,166 +688,86 @@ Important reminders:
             return self._fallback_decision()
 
     def _extract_json_from_response(self, response: str) -> str:
-        """Extract JSON portion from response, handling cases with reasoning content"""
+        """Extract JSON portion from response"""
         import re
 
-        # Method 1: Find complete JSON object {key: value, key: value}
-        json_pattern = r'\{[^{}]*"订货决策"[^{}]*"原因解释"[^{}]*\}'
+        # Method 1: Find any JSON object
+        json_pattern = r'\{[^{}]*\}'
         json_matches = re.findall(json_pattern, response)
         if json_matches:
-            print(f"DEBUG: Found complete JSON object: {json_matches[0]}")
-            return json_matches[0]
-
-        # Method 2: Find any JSON object
-        json_pattern2 = r'\{[^{}]*\}'
-        json_matches2 = re.findall(json_pattern2, response)
-        if json_matches2:
-            # Prioritize JSON containing relevant fields
-            for match in json_matches2:
-                if '订货决策' in match or 'decision' in match or 'order_decision' in match:
+            for match in json_matches:
+                if 'decision' in match or 'order_decision' in match or 'order_quantity' in match:
                     print(f"DEBUG: Found JSON object: {match}")
                     return match
-            # If no relevant field found, return first JSON object
-            print(f"DEBUG: Using first JSON object: {json_matches2[0]}")
-            return json_matches2[0]
+            print(f"DEBUG: Using first JSON object: {json_matches[0]}")
+            return json_matches[0]
 
-        # Method 3: No JSON found, return raw response
+        # Method 2: No JSON found, return raw response
         print(f"DEBUG: No JSON object found, returning raw response")
         return response
 
     def _extract_number_from_response(self, response: str) -> int:
-        """Enhanced logic to extract numbers from LLM response"""
+        """Extract order quantity from LLM response using tiered fallback strategies"""
         import re
 
         print(f"DEBUG: [{self.role}] Starting number extraction...")
 
-        # Method 1: Check if pure numeric (ideal case)
-        print(f"Check if pure numeric: {response.isdigit()}")
-        if response.isdigit():
-            result = int(response)
-            print(f"Method 1 success: pure number {result}")
-            return result
-
-        # Method 2: Find standalone numbers (surrounded by spaces, punctuation, or line boundaries)
+        # Method 1: Standalone numbers (surrounded by spaces/punctuation/line boundaries)
         standalone_numbers = re.findall(r'(?:^|\s|[^\d])(\d+)(?:\s|[^\d]|$)', response)
-        print(f"Method 2: standalone numbers {standalone_numbers}")
+        print(f"Method 1: standalone numbers {standalone_numbers}")
         if standalone_numbers:
-            # Filter numbers in reasonable range, prioritize reasonable order quantities
             valid_numbers = [int(n) for n in standalone_numbers if 0 <= int(n) <= 1000]
             if valid_numbers:
-                # Smart selection: prioritize numbers in 3-100 range (more likely to be order quantities)
                 preferred_numbers = [n for n in valid_numbers if 3 <= n <= 100]
                 if preferred_numbers:
-                    result = preferred_numbers[-1]  # Take last preferred number
-                    print(f"Method 2 success: preferred number {result}")
+                    result = preferred_numbers[-1]
+                    print(f"Method 1 success: preferred number {result}")
                     return result
                 else:
-                    result = valid_numbers[-1]  # Take last reasonable number
-                    print(f"Method 2 success: standalone number {result}")
+                    result = valid_numbers[-1]
+                    print(f"Method 1 success: standalone number {result}")
                     return result
 
-        # Method 3: Find numbers at end of line (usually the final decision)
-        line_end_numbers = re.findall(r'(\d+)\s*$', response, re.MULTILINE)
-        print(f"Method 3: end of line numbers {line_end_numbers}")
-        if line_end_numbers:
-            valid_numbers = [int(n) for n in line_end_numbers if 0 <= int(n) <= 1000]
-            if valid_numbers:
-                result = valid_numbers[-1]
-                print(f"Method 3 success: end of line number {result}")
-                return result
-
-        # Method 4: Find numbers at end of sentences
-        sentence_end_numbers = re.findall(r'(\d+)[.!?]*\s*$', response)
-        print(f"Method 4: end of sentence numbers {sentence_end_numbers}")
-        if sentence_end_numbers:
-            valid_numbers = [int(n) for n in sentence_end_numbers if 0 <= int(n) <= 1000]
-            if valid_numbers:
-                result = valid_numbers[-1]
-                print(f"Method 4 success: end of sentence number {result}")
-                return result
-
-        # Method 5: Find all numbers, smart filtering
+        # Method 2: All numbers with smart filtering
         all_numbers = re.findall(r'\d+', response)
-        print(f"Method 5: all numbers {all_numbers}")
+        print(f"Method 2: all numbers {all_numbers}")
         if all_numbers:
-            # Convert to integers and filter
             int_numbers = [int(n) for n in all_numbers]
-
-            # Filter out numbers that are clearly not order quantities (e.g. costs, percentages, rounds, etc.)
             filtered_numbers = []
             for num in int_numbers:
-                # Keep reasonable order quantity range
                 if 0 <= num <= 1000:
-                    # Exclude obvious cost numbers (numbers after decimal points are usually costs)
                     if num not in [0, 1, 2] or len([x for x in int_numbers if x == num]) == 1:
                         filtered_numbers.append(num)
 
             if filtered_numbers:
-                result = filtered_numbers[-1]  # Take last reasonable number
-                print(f"Method 5 success: filtered number {result}")
+                result = filtered_numbers[-1]
+                print(f"Method 2 success: filtered number {result}")
                 return result
             elif int_numbers:
-                # If no numbers after filtering, take the last raw number
                 result = int_numbers[-1]
-                print(f"Method 5 fallback: last number {result}")
-                return min(max(result, 0), 1000)  # Constrain within reasonable range
+                print(f"Method 2 fallback: last number {result}")
+                return min(max(result, 0), 1000)
 
-        # Method 6: Special handling for incomplete responses (e.g. "We need")
-        incomplete_patterns = [
+        # Method 3: Keyword-based patterns
+        keyword_patterns = [
             r'we need.*?(\d+)',
             r'i recommend.*?(\d+)',
             r'order.*?(\d+)',
             r'quantity.*?(\d+)',
             r'decision.*?(\d+)'
         ]
-
-        for pattern in incomplete_patterns:
+        for pattern in keyword_patterns:
             match = re.search(pattern, response.lower())
             if match:
                 result = int(match.group(1))
                 if 0 <= result <= 1000:
-                    print(f"Method 6 success: incomplete response match {result}")
+                    print(f"Method 3 success: keyword match {result}")
                     return result
 
-        # Method 7: If response is incomplete text, estimate a reasonable value
-        if 'we need' in response.lower() or 'i recommend' in response.lower():
-            print(f"DEBUG: [{self.role}] Detected incomplete response, using intelligent fallback")
-            return self._intelligent_fallback_for_incomplete_response(response)
-
-        # Method 8: If no numbers at all, return default value
+        # No numbers found, return default
         print(f"WARNING: [{self.role}] Cannot extract any reasonable number from response, using default 0")
         print(f"WARNING: [{self.role}] Raw response: {response}")
         return 0
-
-    def _intelligent_fallback_for_incomplete_response(self, response: str) -> int:
-        """Intelligent fallback strategy for incomplete responses"""
-        print(f"DEBUG: [{self.role}] Executing intelligent fallback for incomplete response")
-
-        # If response starts with "We need", this may mean LLM wanted to say "We need X units"
-        # Estimate a reasonable value based on context
-        try:
-            context = self.get_decision_context()
-            inventory = context.get('inventory', 0)
-            backorder = context.get('backorder', 0)
-            demand = context.get('current_demand', 0)
-
-            # Simple heuristic: if LLM says "We need", it likely needs to replenish inventory
-            if backorder > 0:
-                estimated_order = backorder + demand  # replenish backorders plus demand
-            elif inventory < demand:
-                estimated_order = demand - inventory + 2  # replenish to meet demand plus small buffer
-            else:
-                estimated_order = max(demand, 5)  # Conservative ordering under normal conditions
-
-            # Constrain within reasonable range
-            estimated_order = max(1, min(estimated_order, 50))
-
-            print(f"DEBUG: [{self.role}] Estimated order based on context: {estimated_order} (inventory={inventory}, backorder={backorder}, demand={demand})")
-            return estimated_order
-
-        except Exception as e:
-            print(f"DEBUG: [{self.role}] Intelligent fallback calculation failed: {e}, using default")
-            return 5  # Default conservative value
 
     def _apply_order_limits(self, order_quantity: int) -> int:
         """Apply order quantity limits"""
@@ -792,117 +826,6 @@ Important reminders:
                     self.last_decision_explanation = getattr(self, 'last_decision_explanation', '') + f" (adjusted: {original_quantity}->clamped {order_quantity})"
 
         return order_quantity
-
-    def _is_harmony_format(self, response: str) -> bool:
-        """Detect if harmony format response"""
-        # harmony format markers <mcreference link="https://cobusgreyling.medium.com/what-is-gpt-oss-harmony-response-format-a29f266d6672" index="3">3</mcreference>
-        harmony_markers = ['<|start|>', '<|end|>', '<|message|>', '<|channel|>', '<|call|>']
-        return any(marker in response for marker in harmony_markers)
-
-    def _parse_harmony_response(self, response: str) -> int:
-        """Parse harmony format response with enhanced fault tolerance <mcreference link="https://cookbook.openai.com/articles/openai-harmony" index="2">2</mcreference>"""
-        import re
-        import json
-
-        try:
-            # Extract text from main content channel
-            # Harmony format may contain multiple channels; find the one with the decision
-
-            # Method 1: Find content between <|message|> markers
-            message_pattern = r'<\|message\|>(.*?)(?:<\|end\||$)'
-            message_matches = re.findall(message_pattern, response, re.DOTALL)
-
-            # Method 2: Find plain text without special markers
-            # Remove all harmony control markers to get plain text
-            clean_text = re.sub(r'<\|[^|]+\|>', '', response)
-
-            # Attempt to extract decision from message content
-            content_to_parse = ""
-            if message_matches:
-                content_to_parse = message_matches[-1].strip()  # Take last message
-            else:
-                content_to_parse = clean_text.strip()
-
-            # Use multiple regex patterns to extract order quantity
-            patterns = [
-                r'order quantity[：:]*(\d+)',  # English format
-                r'order[：:]*(\d+)',           # Short English format
-                r'quantity[：:]*(\d+)',        # Quantity format
-                r'decision[：:]*(\d+)',        # Decision format
-                r'订货决策[：:]*(\d+)',         # Chinese format
-                r'订购数量[：:]*(\d+)',         # Standard Chinese format
-                r'订购[：:]*(\d+)',             # Simplified Chinese format
-                r'数量[：:]*(\d+)',             # Quantity format
-                r'决策[：:]*(\d+)',             # Decision format
-            ]
-
-            order_quantity = None
-            for pattern in patterns:
-                match = re.search(pattern, content_to_parse, re.IGNORECASE)
-                if match:
-                    order_quantity = int(match.group(1))
-                    break
-
-            # If no specific format found, try traditional delimiter method
-            if order_quantity is None:
-                if '|' in content_to_parse:
-                    parts = content_to_parse.split('|', 1)
-                    quantity_str = parts[0].strip()
-                    explanation = parts[1].strip() if len(parts) > 1 else ""
-                else:
-                    # Attempt to extract number and explanation
-                    quantity_str = content_to_parse
-                    explanation = content_to_parse
-
-                # Extract number
-                numbers = re.findall(r'\d+', quantity_str)
-                if numbers:
-                    order_quantity = int(numbers[0])
-
-            if order_quantity is not None:
-                # Extract explanation portion (multiple patterns)
-                explanation_patterns = [
-                    r'\((.*?)\)',           # Parenthesized content
-                    r'解释[：:]*(.*?)(?:\n|$)',  # Content after explanation
-                    r'原因[：:]*(.*?)(?:\n|$)',  # Content after reason
-                ]
-
-                explanation = "Harmony format parsing"
-                for exp_pattern in explanation_patterns:
-                    exp_match = re.search(exp_pattern, content_to_parse, re.IGNORECASE)
-                    if exp_match:
-                        explanation = exp_match.group(1).strip()
-                        break
-
-                # Apply order quantity limits
-                order_quantity = self._apply_order_limits(order_quantity)
-
-                # Validate final order quantity
-                agent_config = getattr(self.config, self.role)
-                if (hasattr(agent_config, 'enable_discrete_points') and
-                    agent_config.enable_discrete_points):
-                    # In discrete point mode, order quantity must be > 0
-                    if order_quantity > 0 and order_quantity <= 1000:
-                        # Save decision explanation
-                        self.last_decision_explanation = f"Harmony format parsing: {explanation}"
-                        self.logger.info(f"Successfully parsed harmony format response: order {order_quantity}, explanation: {explanation[:50]}...")
-                        return order_quantity
-                else:
-                    # In continuous mode, order quantity must be non-negative
-                    if 0 <= order_quantity <= 1000:
-                        # Save decision explanation
-                        self.last_decision_explanation = f"Harmony format parsing: {explanation}"
-                        self.logger.info(f"Successfully parsed harmony format response: order {order_quantity}, explanation: {explanation[:50]}...")
-                        return order_quantity
-
-            # If unable to extract valid number from harmony format, log details
-            self.logger.warning(f"Harmony format parsing failed, response content: {response[:200]}...")
-
-        except Exception as e:
-            self.logger.warning(f"Harmony format parsing exception: {e}, response: {response[:100]}...")
-
-        # Parse failed, return default value for upper layer to handle
-        return 0
 
     def _parse_json_decision_with_reason(self, response: str) -> tuple:
         """Parse JSON format decision response, return order quantity and reason"""
@@ -967,30 +890,6 @@ Important reminders:
         # Parse failed, return None
         return None, None
 
-    def _parse_json_decision(self, response: str) -> int:
-        """Parse JSON format decision response (maintain compatibility)"""
-        import json
-        order_quantity, _ = self._parse_json_decision_with_reason(response)
-        if order_quantity is not None:
-            return order_quantity
-
-        # Fallback: old version parsing logic
-        try:
-            # Attempt direct JSON parsing
-            data = json.loads(response)
-            if isinstance(data, dict):
-                # Find possible order quantity fields
-                for key in ['decision', 'order_quantity', 'quantity', 'order']:
-                    if key in data and isinstance(data[key], (int, float)):
-                        self.last_decision_explanation = data.get('explanation', 'JSON format response')
-                        return int(data[key])
-            elif isinstance(data, (int, float)):
-                self.last_decision_explanation = 'JSON numeric response'
-                return int(data)
-        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
-            pass
-        return 0
-
     def _fallback_decision(self) -> int:
         """Fallback decision logic (when LLM fails), intelligent decision based on current state"""
         try:
@@ -1042,11 +941,6 @@ Important reminders:
             current_demand = context.get('current_demand', 0)
             self.demand_signal_history.append(current_demand)
 
-            # Add coordinator guidance to context
-            if self.coordinator_guidance:
-                context['coordinator_guidance'] = self.coordinator_guidance
-
-
             # Create prompts
             system_prompt = self._create_system_prompt()
             user_prompt = self._create_user_prompt(context)
@@ -1074,8 +968,12 @@ Important reminders:
             # Parse response
             final_order_quantity = self._parse_llm_response(response)
 
-            # No need for reasoning explanation, just record decision
-            self.last_reasoning = f"Decision: {final_order_quantity}"
+            # Save reasoning: prefer decision reason, fall back to raw response, then summary
+            self.last_reasoning = (
+                getattr(self, 'last_decision_reason', '') or
+                self.last_raw_response or
+                f"Decision: {final_order_quantity}"
+            )
 
             # Record decision history (including explanation and reason)
             decision_record = {
@@ -1110,137 +1008,3 @@ Important reminders:
         }
 
         return explanation
-
-
-
-
-class RuleBasedAgent(BaseAgent):
-    """Rule-based agent (for comparison)"""
-
-    def __init__(self,
-                 role: str,
-                 config: GameConfig,
-                 strategy: str = 'base_stock',
-                 agent_id: str = ""):
-        """
-        Initialize rule-based agent
-
-        Args:
-            role: Agent role
-            config: Game configuration
-            strategy: Strategy type ('base_stock', 'order_up_to', 'moving_average')
-            agent_id: Agent ID
-        """
-        super().__init__(role, config, None, agent_id)
-        self.strategy = strategy
-
-        # Strategy parameters
-        self.base_stock_level = 20  # Base stock level
-        self.order_up_to_level = 25  # Order-up-to point
-        self.ma_window = 5  # Moving average window
-
-    def make_decision(self) -> int:
-        """Make decision based on rules"""
-        if self.strategy == 'base_stock':
-            order_quantity = self._base_stock_policy()
-        elif self.strategy == 'order_up_to':
-            order_quantity = self._order_up_to_policy()
-        elif self.strategy == 'moving_average':
-            order_quantity = self._moving_average_policy()
-        else:
-            order_quantity = self._simple_policy()
-
-        # Apply order limits
-        return self._apply_order_limits(order_quantity)
-
-    def _base_stock_policy(self) -> int:
-        """Base stock policy"""
-        current_position = self.state.inventory + sum(self.shipment_pipeline)
-        target = self.base_stock_level
-        order = max(0, target - current_position + self.current_demand)
-        return order
-
-    def _order_up_to_policy(self) -> int:
-        """Order-up-to policy"""
-        current_position = self.state.inventory + sum(self.shipment_pipeline)
-        if current_position <= self.order_up_to_level:
-            return self.current_demand * 2  # Order twice the demand
-        return self.current_demand
-
-    def _moving_average_policy(self) -> int:
-        """Moving average policy"""
-        if len(self.state.orders_history) < self.ma_window:
-            return self.current_demand
-
-        # Calculate moving average of recent demands
-        recent_demands = [self.current_demand] + self.state.orders_history[-self.ma_window+1:]
-        avg_demand = sum(recent_demands) / len(recent_demands)
-
-        # Decision based on average demand and current inventory
-        target_inventory = avg_demand * (self.lead_time + 1)
-        current_position = self.state.inventory + sum(self.shipment_pipeline)
-        order = max(0, target_inventory - current_position + self.state.backorder)
-
-        return int(order)
-
-    def _simple_policy(self) -> int:
-        """Simple policy: order equals demand"""
-        return self.current_demand
-
-    def _apply_order_limits(self, order_quantity: int) -> int:
-        """Apply order quantity limits"""
-        agent_config = getattr(self.config, self.role)
-        original_quantity = order_quantity
-
-        # Discrete point selection logic
-        if (hasattr(agent_config, 'enable_discrete_points') and
-            agent_config.enable_discrete_points and
-            hasattr(agent_config, 'discrete_order_points') and
-            agent_config.discrete_order_points):
-
-            discrete_points = agent_config.discrete_order_points
-
-            # Ensure discrete point list does not contain 0 or negative numbers
-            valid_discrete_points = [p for p in discrete_points if p > 0]
-
-            if not valid_discrete_points:
-                # If no valid discrete points, use defaults
-                valid_discrete_points = [4, 8, 12, 16, 20]
-                print(f"WARNING: No valid discrete points (>0) found, using default: {valid_discrete_points}")
-
-            # If original order quantity <= 0, select smallest valid discrete point
-            if original_quantity <= 0:
-                order_quantity = min(valid_discrete_points)
-                print(f"DEBUG: Original quantity <= 0, using minimum discrete point: {order_quantity}")
-            else:
-                # Find closest discrete point
-                order_quantity = min(valid_discrete_points, key=lambda x: abs(x - original_quantity))
-
-            print(f"DEBUG: Applied discrete points selection: original={original_quantity}, adjusted={order_quantity}, points={valid_discrete_points}")
-
-            # Update decision explanation to reflect adjustment
-            if hasattr(self, 'last_decision_explanation'):
-                self.last_decision_explanation = getattr(self, 'last_decision_explanation', '') + f" (adjusted: {original_quantity}->discrete {order_quantity})"
-
-            return order_quantity
-
-        # Continuous range limit logic
-        # Add debug log
-        print(f"DEBUG: Checking order limits for {self.role}: min={getattr(agent_config, 'min_order_quantity', None)}, max={getattr(agent_config, 'max_order_quantity', None)}")
-
-        if (hasattr(agent_config, 'min_order_quantity') and hasattr(agent_config, 'max_order_quantity') and
-            agent_config.min_order_quantity is not None and agent_config.max_order_quantity is not None):
-            min_order = agent_config.min_order_quantity
-            max_order = agent_config.max_order_quantity
-
-            order_quantity = max(min_order, min(max_order, order_quantity))
-
-            print(f"DEBUG: Applying order limits: original={original_quantity}, adjusted={order_quantity}, limits=[{min_order}, {max_order}]")
-
-            if original_quantity != order_quantity:
-                print(f"DEBUG: Order quantity adjusted from {original_quantity} to {order_quantity} due to limits [{min_order}, {max_order}]")
-                # Update decision explanation to reflect adjustment
-                if hasattr(self, 'last_decision_explanation'):
-                    self.last_decision_explanation = getattr(self, 'last_decision_explanation', '') + f" (adjusted: {original_quantity}->clamped {order_quantity})"
-
-        return order_quantity

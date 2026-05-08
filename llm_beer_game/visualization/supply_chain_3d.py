@@ -59,7 +59,7 @@ class SupplyChain3DVisualizer:
                 "agents": {},
                 "orders_flow": round_data.get("orders_flow", []),
                 "shipments": [],
-                "coordinator_suggestions": round_data.get("coordinator_suggestions", {})  # Add coordinator suggestions
+                "coordinator_suggestions": {},  # Disabled
             }
             
             # Extract agent states
@@ -74,7 +74,7 @@ class SupplyChain3DVisualizer:
                         "order_placed": agent_data.get("order_placed", 0),
                         "demand_received": agent_data.get("demand_received", 0),
                         "shipment_pipeline": agent_data["end_state"].get("shipment_pipeline", []),
-                        "coordinator_suggestion": agent_data.get("coordinator_suggestion", "")  # Add coordinator suggestion
+                        "coordinator_suggestion": ""  # Disabled
                     }
             
             # Generate shipment flow data
@@ -131,129 +131,187 @@ class SupplyChain3DVisualizer:
         
         #controls {{
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 10px;
+            left: 10px;
             z-index: 100;
-            background: rgba(255,255,255,0.9);
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            background: rgba(255,255,255,0.92);
+            padding: 8px 10px;
+            border-radius: 6px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            font-size: 11px;
+            max-width: 200px;
         }}
-        
+        #controls.collapsed .control-group {{
+            display: none;
+        }}
+        #controls.collapsed {{
+            padding: 4px 10px;
+        }}
+
         #info {{
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 10px;
+            right: 10px;
             z-index: 100;
-            background: rgba(255,255,255,0.9);
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            min-width: 250px;
-            max-height: 90vh;
+            background: rgba(255,255,255,0.92);
+            padding: 8px 10px;
+            border-radius: 6px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            min-width: 180px;
+            max-width: 230px;
+            max-height: 80vh;
             overflow-y: auto;
+            font-size: 11px;
+        }}
+        #info.collapsed .info-item,
+        #info.collapsed .agent-data,
+        #info.collapsed h4 {{
+            display: none;
+        }}
+        #info.collapsed {{
+            padding: 4px 10px;
         }}
         
         .agent-data {{
-            margin-top: 10px;
+            margin-top: 6px;
             border-top: 1px solid #eee;
-            padding-top: 10px;
+            padding-top: 6px;
         }}
-        
+
         .agent-section {{
-            margin-bottom: 12px;
-            padding: 8px;
-            border-radius: 5px;
+            margin-bottom: 6px;
+            padding: 5px 6px;
+            border-radius: 4px;
             background-color: rgba(240,240,240,0.5);
         }}
-        
-        .control-group {{
-            margin-bottom: 10px;
+
+        .panel-header {{
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }}
-        
+        .panel-header .toggle-icon {{
+            font-size: 10px;
+            transition: transform 0.2s;
+            color: #888;
+        }}
+        .collapsed .panel-header .toggle-icon {{
+            transform: rotate(-90deg);
+        }}
+
+        .control-group {{
+            margin-bottom: 6px;
+        }}
+
         .control-group label {{
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
             font-weight: bold;
             color: #333;
+            font-size: 11px;
         }}
-        
+
         .control-group input, .control-group button {{
             width: 100%;
-            padding: 8px;
+            padding: 4px 6px;
             border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
+            border-radius: 4px;
+            font-size: 11px;
         }}
-        
+
         .control-group button {{
             background: #4CAF50;
             color: white;
             border: none;
             cursor: pointer;
             transition: background 0.3s;
+            padding: 5px 8px;
         }}
-        
+
         .control-group button:hover {{
             background: #45a049;
         }}
-        
+
         .control-group button:disabled {{
             background: #cccccc;
             cursor: not-allowed;
         }}
-        
+
         #info h3 {{
             margin-top: 0;
             color: #333;
             border-bottom: 2px solid #4CAF50;
-            padding-bottom: 5px;
+            padding-bottom: 3px;
+            font-size: 13px;
         }}
-        
+        #info h4 {{
+            font-size: 11px;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }}
+        #info h5 {{
+            font-size: 11px;
+            margin: 3px 0;
+        }}
+
         .info-item {{
-            margin-bottom: 8px;
-            font-size: 14px;
+            margin-bottom: 3px;
+            font-size: 11px;
         }}
-        
+
         .info-label {{
             font-weight: bold;
             color: #555;
         }}
-        
+
         .info-value {{
             color: #333;
         }}
-        
+
         .legend {{
             position: absolute;
-            bottom: 20px;
-            left: 20px;
+            bottom: 10px;
+            left: 10px;
             z-index: 100;
-            background: rgba(255,255,255,0.9);
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            background: rgba(255,255,255,0.92);
+            padding: 8px 10px;
+            border-radius: 6px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            font-size: 11px;
         }}
-        
+        .legend.collapsed .legend-item {{
+            display: none;
+        }}
+        .legend.collapsed {{
+            padding: 4px 10px;
+        }}
+
         .legend-item {{
             display: flex;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
+            font-size: 11px;
         }}
-        
+
         .legend-color {{
-            width: 20px;
-            height: 20px;
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
-            margin-right: 10px;
+            margin-right: 8px;
         }}
     </style>
 </head>
 <body>
     <div id="container">
 <div id="controls">
+            <div class="panel-header" onclick="togglePanel('controls')">
+                <span><b>🎮 Controls</b></span>
+                <span class="toggle-icon">▼</span>
+            </div>
             <div class="control-group">
-                <label for="roundSlider">Simulation Round:</label>
+                <label for="roundSlider">Round:</label>
                 <input type="range" id="roundSlider" min="0" max="0" value="0">
                 <span id="roundDisplay">Round 1</span>
             </div>
@@ -261,17 +319,20 @@ class SupplyChain3DVisualizer:
                 <button id="playButton">▶️ Play</button>
             </div>
             <div class="control-group">
-                <label for="speedSlider">Playback Speed:</label>
+                <label for="speedSlider">Speed:</label>
                 <input type="range" id="speedSlider" min="1" max="20" value="5">
                 <span id="speedDisplay">5x</span>
             </div>
             <div class="control-group">
-                <button id="resetButton">🔄 Reset View</button>
+                <button id="resetButton">🔄 Reset</button>
             </div>
         </div>
         
         <div id="info">
-            <h3>📊 Current Status</h3>
+            <div class="panel-header" onclick="togglePanel('info')">
+                <span><b>📊 Status</b></span>
+                <span class="toggle-icon">▼</span>
+            </div>
             <div class="info-item">
                 <span class="info-label">Round:</span>
                 <span class="info-value" id="currentRound">1</span>
@@ -293,7 +354,7 @@ class SupplyChain3DVisualizer:
                 <span class="info-value" id="totalBackorder">0</span>
             </div>
 
-            <h4 style="margin-top: 15px; color: #333;">🏢 Participant Data</h4>
+            <h4>🏢 Participant Data</h4>
             <div class="agent-data">
                 <div class="agent-section">
                     <h5 style="margin: 5px 0; color: #FF6B6B;">Retailer</h5>
@@ -313,14 +374,10 @@ class SupplyChain3DVisualizer:
                         <span class="info-label">Orders:</span>
                         <span class="info-value" id="retailerOrder">0</span>
                     </div>
-                    <div class="info-item" id="retailerSuggestion" style="display: none; background-color: #fff3cd; padding: 5px; border-radius: 3px; margin-top: 5px;">
-                        <span class="info-label">📋 Coordinator Suggestion:</span>
-                        <span class="info-value"></span>
-                    </div>
                 </div>
                 
                 <div class="agent-section">
-                    <h5 style="margin: 5px 0; color: #4ECDC4;">Wholesaler</h5>
+                    <h5 style="margin: 3px 0; color: #4ECDC4;">Wholesaler</h5>
                     <div class="info-item">
                         <span class="info-label">Demand:</span>
                         <span class="info-value" id="wholesalerDemand">0</span>
@@ -329,14 +386,18 @@ class SupplyChain3DVisualizer:
                         <span class="info-label">Inventory:</span>
                         <span class="info-value" id="wholesalerInventory">0</span>
                     </div>
-                    <div class="info-item" id="wholesalerSuggestion" style="display: none; background-color: #fff3cd; padding: 5px; border-radius: 3px; margin-top: 5px;">
-                        <span class="info-label">📋 Coordinator Suggestion:</span>
-                        <span class="info-value"></span>
+                    <div class="info-item">
+                        <span class="info-label">Backorder:</span>
+                        <span class="info-value" id="wholesalerBackorder">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Orders:</span>
+                        <span class="info-value" id="wholesalerOrder">0</span>
                     </div>
                 </div>
-                
+
                 <div class="agent-section">
-                    <h5 style="margin: 5px 0; color: #45B7D1;">Distributor</h5>
+                    <h5 style="margin: 3px 0; color: #45B7D1;">Distributor</h5>
                     <div class="info-item">
                         <span class="info-label">Demand:</span>
                         <span class="info-value" id="distributorDemand">0</span>
@@ -345,14 +406,18 @@ class SupplyChain3DVisualizer:
                         <span class="info-label">Inventory:</span>
                         <span class="info-value" id="distributorInventory">0</span>
                     </div>
-                    <div class="info-item" id="distributorSuggestion" style="display: none; background-color: #fff3cd; padding: 5px; border-radius: 3px; margin-top: 5px;">
-                        <span class="info-label">📋 Coordinator Suggestion:</span>
-                        <span class="info-value"></span>
+                    <div class="info-item">
+                        <span class="info-label">Backorder:</span>
+                        <span class="info-value" id="distributorBackorder">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Orders:</span>
+                        <span class="info-value" id="distributorOrder">0</span>
                     </div>
                 </div>
-                
+
                 <div class="agent-section">
-                    <h5 style="margin: 5px 0; color: #96CEB4;">Manufacturer</h5>
+                    <h5 style="margin: 3px 0; color: #96CEB4;">Manufacturer</h5>
                     <div class="info-item">
                         <span class="info-label">Demand:</span>
                         <span class="info-value" id="manufacturerDemand">0</span>
@@ -361,9 +426,13 @@ class SupplyChain3DVisualizer:
                         <span class="info-label">Inventory:</span>
                         <span class="info-value" id="manufacturerInventory">0</span>
                     </div>
-                    <div class="info-item" id="manufacturerSuggestion" style="display: none; background-color: #fff3cd; padding: 5px; border-radius: 3px; margin-top: 5px;">
-                        <span class="info-label">📋 Coordinator Suggestion:</span>
-                        <span class="info-value"></span>
+                    <div class="info-item">
+                        <span class="info-label">Backorder:</span>
+                        <span class="info-value" id="manufacturerBackorder">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Orders:</span>
+                        <span class="info-value" id="manufacturerOrder">0</span>
                     </div>
                 </div>
             </div>
@@ -371,7 +440,10 @@ class SupplyChain3DVisualizer:
         </div>
         
         <div class="legend">
-            <h4 style="margin-top: 0; color: #333;">🏢 Supply Chain Roles</h4>
+            <div class="panel-header" onclick="togglePanel('legend')" style="margin-bottom:4px;">
+                <span><b>🏢 Roles</b></span>
+                <span class="toggle-icon">▼</span>
+            </div>
             <div class="legend-item">
                 <div class="legend-color" style="background-color: #FECA57;"></div>
                 <span>Customer</span>
@@ -416,6 +488,16 @@ class SupplyChain3DVisualizer:
         let currentRoundIndex = 0;
         let playSpeed = 3;
         
+        // Toggle panel collapse/expand
+        function togglePanel(panelId) {{
+            const panel = panelId === 'legend'
+                ? document.querySelector('.legend')
+                : document.getElementById(panelId);
+            if (panel) {{
+                panel.classList.toggle('collapsed');
+            }}
+        }}
+
         // Initialize 3D scene
         function initScene() {{
             // Create scene
@@ -1210,56 +1292,30 @@ class SupplyChain3DVisualizer:
                 document.getElementById('retailerInventory').textContent = retailer.inventory || 0;
                 document.getElementById('retailerBackorder').textContent = retailer.backorder || 0;
                 document.getElementById('retailerOrder').textContent = retailer.order_placed || 0;
-                
-                // Show coordinator suggestion
-                const retailerSuggestion = retailer.coordinator_suggestion || "";
-                const suggestionElement = document.getElementById('retailerSuggestion');
-                if (suggestionElement) {{
-                    suggestionElement.textContent = retailerSuggestion;
-                    suggestionElement.style.display = retailerSuggestion ? 'block' : 'none';
-                }}
             }}
             
             if (roundData.agents.wholesaler) {{
                 const wholesaler = roundData.agents.wholesaler;
                 document.getElementById('wholesalerDemand').textContent = wholesaler.demand_received || 0;
                 document.getElementById('wholesalerInventory').textContent = wholesaler.inventory || 0;
-                
-                // Show coordinator suggestion
-                const wholesalerSuggestion = wholesaler.coordinator_suggestion || "";
-                const suggestionElement = document.getElementById('wholesalerSuggestion');
-                if (suggestionElement) {{
-                    suggestionElement.textContent = wholesalerSuggestion;
-                    suggestionElement.style.display = wholesalerSuggestion ? 'block' : 'none';
-                }}
+                document.getElementById('wholesalerBackorder').textContent = wholesaler.backorder || 0;
+                document.getElementById('wholesalerOrder').textContent = wholesaler.order_placed || 0;
             }}
-            
+
             if (roundData.agents.distributor) {{
                 const distributor = roundData.agents.distributor;
                 document.getElementById('distributorDemand').textContent = distributor.demand_received || 0;
                 document.getElementById('distributorInventory').textContent = distributor.inventory || 0;
-                
-                // Show coordinator suggestion
-                const distributorSuggestion = distributor.coordinator_suggestion || "";
-                const suggestionElement = document.getElementById('distributorSuggestion');
-                if (suggestionElement) {{
-                    suggestionElement.textContent = distributorSuggestion;
-                    suggestionElement.style.display = distributorSuggestion ? 'block' : 'none';
-                }}
+                document.getElementById('distributorBackorder').textContent = distributor.backorder || 0;
+                document.getElementById('distributorOrder').textContent = distributor.order_placed || 0;
             }}
-            
+
             if (roundData.agents.manufacturer) {{
                 const manufacturer = roundData.agents.manufacturer;
                 document.getElementById('manufacturerDemand').textContent = manufacturer.demand_received || 0;
                 document.getElementById('manufacturerInventory').textContent = manufacturer.inventory || 0;
-                
-                // Show coordinator suggestion
-                const manufacturerSuggestion = manufacturer.coordinator_suggestion || "";
-                const suggestionElement = document.getElementById('manufacturerSuggestion');
-                if (suggestionElement) {{
-                    suggestionElement.textContent = manufacturerSuggestion;
-                    suggestionElement.style.display = manufacturerSuggestion ? 'block' : 'none';
-                }}
+                document.getElementById('manufacturerBackorder').textContent = manufacturer.backorder || 0;
+                document.getElementById('manufacturerOrder').textContent = manufacturer.order_placed || 0;
             }}
             
             // Calculate totals

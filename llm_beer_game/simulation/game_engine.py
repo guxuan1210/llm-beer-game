@@ -9,7 +9,6 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agents.base_agent import BaseAgent
-from agents.coordinator_agent import CoordinatorAgent
 from config.game_config import GameConfig
 from llm.llm_client import LLMClient
 
@@ -24,8 +23,6 @@ class SimulationResult:
     bullwhip_metrics: Dict[str, float]
     simulation_time: float
     config: GameConfig
-    coordination_history: List[Dict[str, Any]] = field(default_factory=list)  # Add coordination history
-
 @dataclass
 class DemandPattern:
     """Demand pattern"""
@@ -56,7 +53,7 @@ class GameEngine:
                  agents: Dict[str, BaseAgent],
                  demand_pattern: Optional[DemandPattern] = None,
                  seed: Optional[int] = None,
-                 enable_coordinator: bool = True,
+                 enable_coordinator: bool = False,
                  llm_client: Optional[LLMClient] = None):
         """
         Initialize the game engine
@@ -91,56 +88,7 @@ class GameEngine:
         # Logging
         self.logger = logging.getLogger(f"GameEngine")
 
-        # Coordinator agent
         self.enable_coordinator = enable_coordinator
-        self.coordinator = None
-        if enable_coordinator:
-            # Create coordinator LLM client
-            coordinator_llm_client = None
-            try:
-                # If llm_client parameter provided, use it first
-                if llm_client:
-                    coordinator_llm_client = llm_client
-                # Otherwise create from config
-                elif hasattr(config, 'coordinator_llm_provider'):
-                    from llm.llm_client import LLMClientFactory
-                    # Increase timeout for coordinator, as analysis tasks may be more complex
-                    coordinator_timeout = getattr(config, 'coordinator_timeout', 60)  # Default 60 seconds
-                    coordinator_llm_client = LLMClientFactory.create_client(
-                        provider=config.coordinator_llm_provider,
-                        model_name=getattr(config, 'coordinator_model_name', 'gemma3:27b'),
-                        base_url=getattr(config, 'coordinator_base_url', 'http://localhost:11434'),
-                        api_key=getattr(config, 'coordinator_api_key', None),
-                        timeout=coordinator_timeout
-                    )
-                # If none available, try using main LLM config
-                elif hasattr(config, 'llm'):
-                    from llm.llm_client import LLMClientFactory
-                    # Use main LLM timeout settings, but add some time
-                    main_timeout = getattr(config.llm, 'timeout', 30)
-                    coordinator_timeout = max(main_timeout, 60)  # At least 60 seconds
-                    coordinator_llm_client = LLMClientFactory.create_client(
-                        provider=config.llm.provider,
-                        model_name=config.llm.model,
-                        base_url=getattr(config.llm, 'base_url', 'http://localhost:11434'),
-                        api_key=getattr(config.llm, 'api_key', None),
-                        timeout=coordinator_timeout
-                    )
-
-                if coordinator_llm_client:
-                    self.coordinator = CoordinatorAgent(config, coordinator_llm_client)
-                    self.logger.info("Coordinator agent enabled")
-                else:
-                    self.logger.warning("Unable to create coordinator LLM client, coordinator functionality will be disabled")
-                    self.enable_coordinator = False
-            except Exception as e:
-                self.logger.error(f"Failed to create coordinator LLM client: {e}")
-                self.enable_coordinator = False
-
-        # Coordination history
-        self.coordination_history = []
-        self.previous_prompts = {}
-        self.coordinator_guidance = {}
 
         # Validate agents
         self._validate_agents()
@@ -812,62 +760,6 @@ class GameEngine:
         # Update shared information
         self.update_shared_information()
 
-        # Coordinator global analysis and guidance
-        coordination_guidance = {}
-        coordinator_suggestions = {}  # Used to track coordinator suggestions
-        if self.coordinator and self.current_round > 0:  # Enable coordination from second round
-            try:
-                # Collect current round data
-                round_data_for_analysis = {
-                    'round': self.current_round,
-                    'customer_demand': customer_demand,
-                    'timestamp': time.time()
-                }
-
-                # Collect agent state information
-                agents_info = {}
-                for role, agent in self.agents.items():
-                    agents_info[role] = {
-                        'state': agent.get_state_info(),
-                        'role': role
-                    }
-
-                # Perform global analysis
-                analysis_result = self.coordinator.analyze_supply_chain(
-                    round_data_for_analysis,
-                    agents_info,
-                    self.previous_prompts
-                )
-
-                # Generate coordination guidance
-                coordination_guidance = self.coordinator.generate_coordination_guidance(analysis_result)
-
-                # Get raw guidance data (if available)
-                raw_coordination_data = {}
-                if hasattr(self.coordinator, '_last_raw_guidance'):
-                    raw_coordination_data = self.coordinator._last_raw_guidance
-
-                # Record coordinator suggestions (for visualization)
-                coordinator_suggestions = coordination_guidance.copy()
-
-                # Generate mind map
-                mindmap_markdown = self.coordinator.generate_mindmap_markdown(analysis_result)
-
-                # Record coordination history
-                self.coordination_history.append({
-                    'round': self.current_round,
-                    'analysis': analysis_result,
-                    'guidance': coordination_guidance,
-                    'raw_guidance': raw_coordination_data,  # Add raw guidance data
-                    'mindmap': mindmap_markdown
-                })
-
-                self.logger.info(f"Coordinator analysis complete - round {self.current_round}")
-
-            except Exception as e:
-                self.logger.error(f"Coordinator analysis failed: {e}")
-                coordination_guidance = {}
-
         # Process orders from downstream to upstream
         current_demand = customer_demand
         round_data = {
@@ -876,7 +768,6 @@ class GameEngine:
             'agents': {},
             'orders_flow': [],
             'total_cost': 0.0,
-            'coordinator_suggestions': coordinator_suggestions  # Add coordinator suggestions to round data
         }
 
         # Simplified round start message
@@ -891,10 +782,6 @@ class GameEngine:
 
             # Simplified agent state display
             role_name = {'retailer': 'Retailer', 'wholesaler': 'Wholesaler', 'distributor': 'Distributor', 'manufacturer': 'Manufacturer'}[role]
-
-            # Add coordinator guidance to agent
-            if hasattr(agent, 'set_coordinator_guidance') and role in coordination_guidance:
-                agent.set_coordinator_guidance(coordination_guidance[role])
 
             # Process round
             order_quantity = agent.process_round(current_demand)
@@ -924,8 +811,6 @@ class GameEngine:
             if hasattr(agent, '_create_user_prompt') and hasattr(agent, '_create_system_prompt'):
                 try:
                     context = agent.get_decision_context()
-                    if self.coordinator_guidance and role in coordination_guidance:
-                        context['coordinator_guidance'] = coordination_guidance[role]
 
                     # Get complete system prompt and user prompt
                     system_prompt = agent._create_system_prompt()
@@ -940,25 +825,28 @@ class GameEngine:
                         'full_prompt': f"System: {system_prompt}\n\nUser: {user_prompt}"
                     }
 
-                    # Save simplified version for coordinator analysis
-                    self.previous_prompts[role] = user_prompt[:200]
                 except Exception as e:
                     self.logger.warning(f"Unable to record prompt for {role}: {e}")
 
             # Collect decision explanation (if LLM agent)
+            decision_reason = ""
+            if hasattr(agent, 'last_decision_reason'):
+                decision_reason = getattr(agent, 'last_decision_reason', '')
             decision_explanation = ""
             if hasattr(agent, 'last_decision_explanation'):
                 decision_explanation = getattr(agent, 'last_decision_explanation', '')
 
-            # Record agent data (including decision explanation and coordinator suggestions)
+            # Record agent data
             round_data['agents'][role] = {
                 'start_state': start_state,
                 'end_state': end_state,
                 'demand_received': current_demand,
                 'order_placed': order_quantity,
                 'round_cost': agent.state.round_cost,
-                'decision_explanation': decision_explanation,
-                'coordinator_suggestion': coordinator_suggestions.get(role, "")  # Add coordinator suggestions
+                'decision_explanation': decision_explanation or decision_reason,
+                'decision_reason': decision_reason,
+                'inventory': end_state.get('inventory', 0),
+                'backorder': end_state.get('backorder', 0),
             }
 
             # Record order flow
@@ -1029,7 +917,7 @@ class GameEngine:
             effective_lt = getattr(agent, 'lead_time', order_lt + transport_lt + production_lt)
             print(f"   {role_name} lead time: Order={order_lt}, Transport={transport_lt}, Production={production_lt}, Effective={effective_lt}")
         print(f"   Information sharing: {'Enabled' if self.config.simulation.information_sharing else 'Disabled'}")
-        print(f"   Coordinator: {'Enabled' if self.coordinator else 'Disabled'}")
+        print(f"   Coordinator: Disabled")
         print(f"   Demand pattern: {self.demand_pattern.pattern_type if self.demand_pattern else 'Default'}")
 
         print(f"\n👥 Participating roles:")
@@ -1157,7 +1045,6 @@ class GameEngine:
             bullwhip_metrics=bullwhip_metrics,
             simulation_time=simulation_time,
             config=self.config,
-            coordination_history=self.coordination_history  # Add coordination history
         )
 
     def _calculate_bullwhip_effect(self) -> Dict[str, Any]:

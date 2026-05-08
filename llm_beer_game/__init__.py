@@ -29,7 +29,6 @@ __email__ = "contact@llmbeergame.com"
 from .agents import (
     BaseAgent,
     LLMAgent,
-    RuleBasedAgent,
     RetailerAgent,
     WholesalerAgent,
     DistributorAgent,
@@ -96,7 +95,6 @@ __all__ = [
     # Agent-related
     'BaseAgent',
     'LLMAgent',
-    'RuleBasedAgent',
     'RetailerAgent',
     'WholesalerAgent',
     'DistributorAgent',

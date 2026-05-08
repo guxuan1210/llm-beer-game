@@ -951,285 +951,6 @@ class StreamlitBeerGameApp:
                             config_mgr.remove_custom_preset(ck)
                             st.rerun()
         
-        # Coordinator Config
-        st.sidebar.header("🤝 Coordinator Config")
-        enable_coordinator = st.sidebar.checkbox(
-            "Enable Global Coordinator", 
-            value=False,
-            help="Coordinator Will Analyze global Supply Chain Status and provide systematic Decision guidance for each Role"
-        )
-        
-        # Add Coordinator LLM Config
-        coordinator_llm_provider = "Ollama"  # Default same as main LLM
-        coordinator_model_name = None
-        coordinator_base_url = None
-        coordinator_api_key = None
-        
-        if enable_coordinator:
-            st.sidebar.info(
-                "🧠 Coordinator Feature:\n"
-                "• Global Supply Chain Status Analysis\n"
-                "• Generate Decision Coordination Guidance\n"
-                "• Create Mind Map Summary\n"
-                "• Improve Decision Systematization"
-            )
-            
-            # Coordinator LLM Config
-            with st.sidebar.expander("🔧 Coordinator LLM Config", expanded=False):
-                st.markdown("### Separate LLM Config for Coordinator")
-                
-                # Use same Config as main LLM as default Value
-                default_provider = llm_provider
-                default_model = model_name if model_name else "gemma3:27b"
-                default_base_url = base_url if base_url else "http://localhost:11434"
-                
-                coordinator_all_providers = ["Ollama", "OpenAI", "Anthropic", "GPT-OSS", "Mock LLM",
-                                                "DeepSeek", "Zhipu GLM", "Moonshot Kimi", "Qwen",
-                                                "OpenRouter", "Groq", "Together AI", "Custom OpenAI-Compatible"]
-                if default_provider in coordinator_all_providers:
-                    coord_default_idx = coordinator_all_providers.index(default_provider)
-                else:
-                    coord_default_idx = 0
-
-                coordinator_llm_provider = st.selectbox(
-                    "Coordinator LLM Provider",
-                    coordinator_all_providers,
-                    index=coord_default_idx,
-                    help="Select LLM Provider for Coordinator (default same as main LLM)"
-                )
-
-                # Coordinator Timeout Config
-                coordinator_timeout = st.slider(
-                    "Coordinator Timeout (seconds)",
-                    min_value=30,
-                    max_value=300,
-                    value=60,
-                    step=10,
-                    help="Coordinator LLM call timeout; complex analysis may take longer"
-                )
-
-                _coord_needs_key = coordinator_llm_provider in ("OpenAI", "Anthropic", "DeepSeek", "Zhipu GLM",
-                                                                "Moonshot Kimi", "Qwen", "OpenRouter", "Groq", "Together AI")
-                if coordinator_llm_provider == "OpenAI":
-                    coordinator_api_key = st.text_input("OpenAI API Key", type="password", value=api_key if api_key else "")
-                    coordinator_model_name = st.selectbox("Model", ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"])
-                elif coordinator_llm_provider == "Anthropic":
-                    coordinator_api_key = st.text_input("Anthropic API Key", type="password", value=api_key if api_key else "")
-                    coordinator_model_name = st.selectbox("Model", ["claude-sonnet-4-20250514", "claude-opus-4-20250514",
-                                                                     "claude-3-opus-20240229", "claude-3-haiku-20240307"])
-                elif coordinator_llm_provider == "Ollama":
-                    coordinator_base_url = st.text_input("Base URL", value=default_base_url, help="Ollama service address")
-                    coordinator_model_name = st.text_input("Model Name", value=default_model, help="Ollama model for coordinator")
-                elif coordinator_llm_provider == "GPT-OSS":
-                    coordinator_model_name = st.text_input("Model Name", value="gpt-oss:20b", help="GPT-OSS model for coordinator")
-                    coordinator_base_url = st.text_input("Base URL", value=default_base_url, help="GPT-OSS service address")
-                elif coordinator_llm_provider in ("DeepSeek", "Zhipu GLM", "Moonshot Kimi", "Qwen",
-                                                   "OpenRouter", "Groq", "Together AI", "Custom OpenAI-Compatible"):
-                    coordinator_api_key = st.text_input(f"{coordinator_llm_provider} API Key", type="password",
-                                                        value=api_key if api_key else "")
-                    coordinator_base_url = st.text_input("Base URL", value=default_base_url if default_base_url else "")
-                    coordinator_model_name = st.text_input("Model Name", value=default_model if default_model else "")
-                else:  # Mock LLM
-                    coordinator_model_name = "mock-coordinator"
-            
-            # Coordinator Prompt Config
-            with st.sidebar.expander("📝 Coordinator Prompt Config", expanded=False):
-                st.markdown("### Custom Coordinator Prompt")
-                
-                # Default Prompt（Extracted from Coordinator Agent）
-                default_analysis_prompt = """You are coordinating a classic"Beer Game（Beer Game）"Supply Chainscenario and must use"Bullwhip Effect"Perspective for Analysis and Determination。
-
-Key Prerequisites:
-- The only controllable Decision is"Order Quantity"（ordering decision）。
-- Do not propose strategies beyond ordering (e.g., price adjustments, promotions, changing lead times/capacity/transportation, etc.).
-
-📊 Current Supply Chain Status (Round {current_round}):
-Customer Demand: {customer_demand}
-System Total Inventory: {system_metrics.total_inventory}
-System Total Cost: {system_metrics.total_cost:.2f}
-
-🏭 Detailed Status of Each Role:
-{agents_state_info}
-
-Please focus on the Bullwhip Effect as core，Pay special attention to Order Stability issues，Analyze supply chain status from the following dimensions:
-
-1. **Demand Trend Analysis**: Current customer demand change trend (rising/falling/stable/fluctuation)
-2. **Bullwhip Effect Diagnosis**: Amplification of order fluctuation in supply chain (severe/medium/slight/none)
-3. **Inventory Balance Assessment**: Whether each stage inventory level is reasonable (too high/normal/too low)
-4. **Order Stability Check**: Whether each role's ordering is consistently stable, whether extreme decisions exist
-5. **Bottleneck Identification**: Which segment of the supply chain requires the most attention
-
-Please focus on Analysis. Do not output JSON format diagnostic results. Your Analysis will be used to generate specific Order Guidance Suggestions subsequently."""
-                
-                default_guidance_prompt = """You are the global coordinator of the Beer Game supply chain. Based on Bullwhip Effect analysis results, provide specific order guidance for supply chain roles needing intervention.
-
-🎯 **Core Mission**: Based on bullwhip effect diagnosis, provide specific order quantity suggestions for supply chain roles needing intervention.
-
-📊 **Analysis Conclusion**:
-- Bullwhip Effect Severity: {bullwhip_severity}
-- Demand Trend: {demand_trend}
-- InventoryStatusAnalysis:
-  * Retailer: {inventory_retailer}
-  * Wholesaler: {inventory_wholesaler}
-  * Distributor: {inventory_distributor}
-  * Manufacturer: {inventory_manufacturer}
-- Identified Key Issues: {key_issues}
-
-🔧 **Guidance Principles**: 
-1. **Precise Intervention**:Only provide Guidance for Roles that genuinely need adjustment; Roles with good Status do not need intervention
-2. **Specific Quantity**:Directly provide clear Order quantity Suggestions rather than vague adjustment directions
-3. **Priority Ranking**:Prioritize the most problematic segment
-4. **Cost Control**:Minimize Total Cost while solving problems
-5. **System Optimization**:Consider overall Supply Chain Coordination; avoid local optimization harming the overall system
-
-📋 **Output Requirements**:
-Provide JSON-formatted specific Guidance for each Role needing intervention，Contains:
-- intervention_required: true（Must be true, indicating intervention is needed）
-- order_quantity: Directly provide specific Order quantity（Must be a positive integer）
-- reason: Clear and concise reason explanation（20characters or less）
-- priority: high/medium/low（Problem Severity）
-
-For Roles not needing intervention, return:
-- intervention_required: false
-
-Return strictJSONformat:
-{
-  "retailer": {
-    "intervention_required": true,
-    "order_quantity": 8,
-    "reason": "Inventory low, replenishment needed",
-    "priority": "high"
-  },
-  "wholesaler": {
-    "intervention_required": false
-  },
-  "distributor": {
-    "intervention_required": true,
-    "order_quantity": 12,
-    "reason": "Smooth Order Fluctuation",
-    "priority": "medium"
-  },
-  "manufacturer": {
-    "intervention_required": false
-  }
-}"""
-                
-                default_mindmap_prompt = """Based on Beer Game Simulation Results, generate a Bullwhip Effect Analysis Mind Map.
-
-📊 **Current Simulation Data**:
-- Demand Trend: {demand_trend}
-- Bullwhip Effect Severity: {bullwhip_severity}
-- Inventory Status of Each Role: {inventory_status}
-- Key Issues: {key_issues}
-- Strategic Suggestions: {strategic_recommendations}
-
-Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus on the following structure**:
-
-# 🍺 Beer Game Bullwhip Effect Diagnosis Report
-
-## 📈 Bullwhip Effect Overall Assessment
-### Severity Determination
-- Based on Current Data:{bullwhip_severity}
-- Fluctuation Amplification Factor Analysis
-- Cost Impact Assessment
-
-### Supply Chain Stability
-- Demand Transmission Distortion
-- Inventory Fluctuation Amplitude
-- Order CV
-
-## 🎯 Key Problem Identification Analysis
-### Retailer Stage Issues
-- Inventory Status: {inventory_retailer}
-- Order Decision Deviation
-- Demand Forecast Accuracy
-
-### Wholesaler Stage Issues
-- Inventory Status: {inventory_wholesaler}
-- Info Transmission Delay
-- Order Amplification Effect
-
-### Distributor Stage Issues
-- Inventory Status: {inventory_distributor}
-- Mid-Tier Coordination
-- Inventory Buffer Strategy
-
-### Manufacturer Stage Issues
-- Inventory Status: {inventory_manufacturer}
-- Production Plan Fluctuation
-- Capacity Utilization Efficiency
-
-### 📊 Order Stability Analysis
-- Order Continuity Assessment by Stage
-- Extreme Order Decision Identification
-- Long-term no-ordering or excessive ordering issues
-- Impact of Order Fluctuation on Bullwhip Effect
-
-## 💡 Targeted Solutions
-### Retailer Optimization Strategy
-- **Specific Prompt Guidance**: Adjust orders based on actual demand; avoid panic ordering
-- **Order Stability Requirements**: Maintain order continuity; avoid long periods of no ordering or sudden large orders
-- Demand Forecast Improvement Methods
-- Inventory Management Optimization
-
-### Wholesaler Optimization Strategy
-- **Specific Prompt Guidance**: Smooth order transmission; reduce fluctuation amplification
-- **Order Stability Requirements**: Keep order quantity relatively stable; avoid extreme order decisions
-- Information Sharing Mechanism
-- Order Batch Optimization
-
-### Distributor Optimization Strategy
-- **Specific Prompt Guidance**: Maintain stable supply rhythm; avoid overreaction
-- **Order Stability Requirements**: Ensure order continuity; avoid stockouts or excessive hoarding
-- Inventory Buffer Management
-- Coordination Mechanism Establishment
-
-### Manufacturer Optimization Strategy
-- **Specific Prompt Guidance**: Focus on long-term demand trends; develop stable production plans
-- **Order Stability Requirements**: Maintain order and production continuity; avoid stoppages or overproduction
-- Capacity Planning Optimization
-- Long-term Trend Analysis
-
-### 🎯 Order Stability Improvement Measures
-- **Continuity Principle**: Ensure each stage ordering maintains continuity and predictability
-- **Extreme Avoidance**: Prevent extreme behaviors of long-term no-ordering or sudden large orders
-- **Gradual Adjustment**: Adopt small-magnitude, gradual order quantity adjustment strategy
-- **Coordination Alignment**: Each stage order decision maintains coordination; avoid local extremization
-- Supply Chain Visualization
-
-## 🔧 Systematic Improvement Measures
-### Info Transparency
-### Coordination Mechanism Optimization
-### Incentive Mechanism Design
-### Risk Sharing Strategy
-
-**Requirements**:
-1. Must analyze based on actual Simulation Data
-2. Clearly identify which stage has the most severe problem among the four firms
-3. Provide specific Prompt improvement Suggestions for each Role
-4. Solutions must be actionable"""
-
-                coordinator_analysis_prompt = st.text_area(
-                    "Analysis Prompt",
-                    value=default_analysis_prompt,
-                    height=300,
-                    help="Prompt for Analyzing global Supply Chain Status"
-                )
-                
-                coordinator_guidance_prompt = st.text_area(
-                    "Guidance Prompt",
-                    value=default_guidance_prompt,
-                    height=300,
-                    help="Prompt for generating Coordination Guidance for each Role"
-                )
-                
-                coordinator_mindmap_prompt = st.text_area(
-                    "Mind Map Prompt",
-                    value=default_mindmap_prompt,
-                    height=300,
-                    help="For Generate Mind Map Prompt"
-                )
-        
         # Information Sharing
         st.sidebar.header("Information Sharing")
         enable_info_sharing = st.sidebar.checkbox("Enable Information Sharing", False)
@@ -1284,41 +1005,7 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
                 - **Lightweight Mode**: Only Share Demand Info
                 """)
         
-        # Agent Type Config
-        st.sidebar.header("🤖 Agent Type Config")
-        agent_types = ["LLM Agent", "Mind Map Agent", "Rule-Based"]
-        
-        retailer_agent_type = st.sidebar.selectbox(
-            "Retailer Type", 
-            agent_types, 
-            index=1 if enable_info_sharing else 0,
-            help="Mind Map Agent:In Information Sharing mode, generates Decision Mind Map then decides"
-        )
-        wholesaler_agent_type = st.sidebar.selectbox(
-            "Wholesaler Type", 
-            agent_types, 
-            index=1 if enable_info_sharing else 0
-        )
-        distributor_agent_type = st.sidebar.selectbox(
-            "Distributor Type", 
-            agent_types, 
-            index=1 if enable_info_sharing else 0
-        )
-        manufacturer_agent_type = st.sidebar.selectbox(
-            "Manufacturer Type", 
-            agent_types, 
-            index=1 if enable_info_sharing else 0
-        )
-        
-        if enable_info_sharing and any(agent_type == "Mind Map Agent" for agent_type in [retailer_agent_type, wholesaler_agent_type, distributor_agent_type, manufacturer_agent_type]):
-            st.sidebar.info(
-                "🗺️ Mind Map Decision Mode:\n"
-                "• Integrate shared information to generate personal decision mind maps\n"
-                "• Structured Decision-making based on Mind Map\n"
-                "• Provides Decision reasoning process Visualization\n"
-                "• Improves Decision quality and transparency"
-            )
-        
+
         # Order Quantity Limit Config
         st.sidebar.header("📊 Order Quantity Limit")
         enable_order_limits = st.sidebar.checkbox(
@@ -1593,17 +1280,6 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
             "model_name": model_name,
             "base_url": base_url,
             "enable_info_sharing": enable_info_sharing,
-            "enable_coordinator": enable_coordinator,
-            # Coordinator LLM Config
-            "coordinator_llm_provider": coordinator_llm_provider,
-            "coordinator_model_name": coordinator_model_name,
-            "coordinator_base_url": coordinator_base_url,
-            "coordinator_api_key": coordinator_api_key,
-            # Agent Type Config
-            "retailer_agent_type": retailer_agent_type,
-            "wholesaler_agent_type": wholesaler_agent_type,
-            "distributor_agent_type": distributor_agent_type,
-            "manufacturer_agent_type": manufacturer_agent_type,
             # Lead Time Parameters
             "retailer_order_lead_time": retailer_order_lead_time,
             "wholesaler_order_lead_time": wholesaler_order_lead_time,
@@ -2033,14 +1709,7 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
         config.simulation.total_weeks = ui_config["num_rounds"]
         config.simulation.random_seed = ui_config["random_seed"]
         
-        # Update Cost Parameters and Agent Type
-        agent_type_mapping = {
-            "LLM Agent": "llm",
-            "Mind Map Agent": "mindmap", 
-            "Rule-Based": "rule"
-        }
-        
-        # Get Cost Config
+        # Update Cost Parameters
         cost_configs = ui_config.get("cost_configs", {})
         individual_costs = cost_configs.get("individual", {})
         
@@ -2060,14 +1729,6 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
                 role_config.cost_config.backorder_cost = 1.0
                 role_config.cost_config.order_cost = 0.0
                 print(f"⚠️ {role} Using default cost config")
-            
-            # Set Agent Type
-            if f"{role}_agent_type" in ui_config:
-                agent_type_str = ui_config[f"{role}_agent_type"]
-                if agent_type_str in agent_type_mapping:
-                    # Extend AgentConfig to support agent_type string
-                    # Temporarily store custom attributes
-                    role_config.agent_type_str = agent_type_mapping[agent_type_str]
             
             # Map initial inventory and initial in-transit values
             # Initial Inventory (whole number)
@@ -2355,20 +2016,6 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
         config.distributor_transport_lead_time = ui_config.get("distributor_transport_lead_time", 2)
         
         # AddCoordinator Config
-        config.enable_coordinator = ui_config.get("enable_coordinator", False)
-        
-        # Add Coordinator LLM Config
-        if config.enable_coordinator:
-            config.coordinator_llm_provider = ui_config.get("coordinator_llm_provider", ui_config.get("llm_provider", "Ollama"))
-            config.coordinator_model_name = ui_config.get("coordinator_model_name", ui_config.get("model_name", "gemma3:27b"))
-            config.coordinator_base_url = ui_config.get("coordinator_base_url", ui_config.get("base_url", "http://localhost:11434"))
-            config.coordinator_api_key = ui_config.get("coordinator_api_key", ui_config.get("api_key", ""))
-            config.coordinator_timeout = ui_config.get("coordinator_timeout", 60)  # AddTimeout Config
-            # AddCoordinator Prompt Config
-            config.coordinator_analysis_prompt = ui_config.get("coordinator_analysis_prompt", None)
-            config.coordinator_guidance_prompt = ui_config.get("coordinator_guidance_prompt", None)
-            config.coordinator_mindmap_prompt = ui_config.get("coordinator_mindmap_prompt", None)
-        
         # AddAdaptiveOrder Quantity Limit Config
         if ui_config.get("enable_adaptive_limits", False):
             # EnableAdaptiveLimit
@@ -2639,40 +2286,13 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
             
 
             
-            # CreateCoordinatorLLMClient（IfConfigDoneSingleseparateCoordinatorLLM）
-            coordinator_llm_client = None
-            if config.enable_coordinator:
-                coordinator_provider = getattr(config, 'coordinator_llm_provider', config.llm.provider)
-                coordinator_model = getattr(config, 'coordinator_model_name', config.llm.model)
-                coordinator_base_url = getattr(config, 'coordinator_base_url', config.llm.base_url)
-                coordinator_api_key = getattr(config, 'coordinator_api_key', getattr(config.llm, 'api_key', ''))
-                
-                try:
-                    _coord_compat = {"OpenAI", "DeepSeek", "Zhipu GLM", "Moonshot Kimi", "Qwen",
-                                     "OpenRouter", "Groq", "Together AI", "Custom OpenAI-Compatible"}
-                    if coordinator_provider == "Ollama":
-                        coordinator_llm_client = OllamaClient(model_name=coordinator_model, base_url=coordinator_base_url)
-                    elif coordinator_provider in _coord_compat:
-                        coordinator_llm_client = OpenAIClient(
-                            api_key=coordinator_api_key, model_name=coordinator_model, base_url=coordinator_base_url
-                        )
-                    elif coordinator_provider == "Anthropic":
-                        coordinator_llm_client = AnthropicClient(api_key=coordinator_api_key, model_name=coordinator_model)
-                    elif coordinator_provider == "GPT-OSS":
-                        coordinator_llm_client = GPTOSSClient(model_name=coordinator_model, base_url=coordinator_base_url)
-                    else:  # Mock LLM
-                        coordinator_llm_client = MockLLMClient(model_name=coordinator_model)
-                except Exception as e:
-                    st.warning(f"Coordinator LLM client creation failed: {e}. Will use main LLM client.")
-                    coordinator_llm_client = llm_manager.get_available_client()
-            
-            # CreateGameEngine（Based onUIConfigdecidewhetherEnableCoordinator）
+            # CreateGameEngine
             engine = GameEngine(
-                config, 
-                agents, 
+                config,
+                agents,
                 demand_pattern=demand_pattern,
-                enable_coordinator=config.enable_coordinator,
-                llm_client=coordinator_llm_client if coordinator_llm_client else (llm_manager.get_available_client() if config.enable_coordinator else None)
+                enable_coordinator=False,
+                llm_client=None
             )
             
             # EnsureGameStatusfullyReSet
@@ -2773,10 +2393,6 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
                     cost = result.agent_costs[role]
                     percentage = (cost / result.total_cost * 100) if result.total_cost > 0 else 0
                     progress_container.text(f"   {role_names[role]}: {cost:.2f} ({percentage:.1f}%)")
-            
-            # willCoordinationHistoryAddtoResultin
-            if hasattr(engine, 'coordination_history'):
-                result.coordination_history = engine.coordination_history
             
             # AnalysisBullwhip Effect
             analyzer = BullwhipAnalyzer()
@@ -3605,23 +3221,13 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
                     order_placed = agent_data.get('order_placed', 0)
                     demand_received = agent_data.get('demand_received', 0)
                     inventory = agent_data.get('inventory', 0)
-                    backlog = agent_data.get('backlog', 0)
-                    
-                    # TryGetDecision ReasonExplanation
-                    decision_reason = "Not providedReasonExplanation"
-                    
-                    # fromagentdecision_historyinGetReason
-                    if hasattr(result, 'agents') and role_key in result.agents:
-                        agent = result.agents[role_key]
-                        if hasattr(agent, 'decision_history') and len(agent.decision_history) > round_idx:
-                            decision_record = agent.decision_history[round_idx]
-                            if isinstance(decision_record, dict):
-                                decision_reason = decision_record.get('reason', decision_record.get('explanation', "Not providedReasonExplanation"))
-                        elif hasattr(agent, 'decision_reasons_history') and len(agent.decision_reasons_history) > round_idx:
-                            decision_reason = agent.decision_reasons_history[round_idx]
-                        elif hasattr(agent, 'last_decision_reason') and round_idx == len(result.round_history) - 1:
-                            decision_reason = agent.last_decision_reason or "Not providedReasonExplanation"
-                    
+                    backlog = agent_data.get('backorder', 0)
+
+                    # Get decision reason from round_data (saved by game_engine)
+                    decision_reason = agent_data.get('decision_reason', '')
+                    if not decision_reason:
+                        decision_reason = agent_data.get('decision_explanation', 'Not provided')
+
                     decision_details.append({
                         'Period': round_num,
                         'Participants': role_name,
@@ -3710,196 +3316,10 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
             st.warning("Not foundDecisionDetailsData，PossibleisbecauseforSimulation ResultsinmissingDecision ReasonInfo。")
 
     def display_coordinator_analysis(self, result):
-        """Display coordinator analysis and guidance"""
-        st.markdown("### 🤖 Coordinator Global Analysis")
-        
-        # CheckWhether there isCoordinationHistoryData
-        if not hasattr(result, 'coordination_history') or not result.coordination_history:
-            st.info("📝 This simulation did not enable the coordinator feature, or the coordinator did not generate analysis data.")
-            st.markdown("""**How to Enable Coordinator Feature:**
-            1. inleft sidebarFindto"Coordinator Config"Part
-            2. Check"Enable Global Coordinator"Option
-            3. ReNewRun Simulation""")
-            return
-        
-        # Display Coordination History Overview
-        st.markdown(f"📊 **Coordination Analysis Total:** {len(result.coordination_history)} times")
-        
-        # forPer RoundCoordinationAnalysisCreateExpandArea
-        for i, coord_data in enumerate(result.coordination_history):
-            round_num = coord_data.get('round', i + 1)
-            
-            with st.expander(f"🔍 Round{round_num} RoundCoordinationAnalysis", expanded=(i == len(result.coordination_history) - 1)):
-                
-                # Display Global Analysis
-                if 'analysis' in coord_data and coord_data['analysis']:
-                    st.markdown("#### 📈 Global Supply Chain Analysis")
-                    analysis = coord_data['analysis']
-                    
-                    # CreateAnalysisMetricColumnLayout
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        st.metric("Demand Trend", analysis.get('demand_trend', 'N/A'))
-                        st.metric("Bullwhip Effect", analysis.get('bullwhip_severity', 'N/A'))
-                    
-                    with col2:
-                        st.metric("Coordination Priority", analysis.get('coordination_priority', 'N/A'))
-                        if 'key_issues' in analysis and analysis['key_issues']:
-                            st.markdown("**Key Issues:**")
-                            for issue in analysis['key_issues']:
-                                st.markdown(f"• {issue}")
-                    
-                    with col3:
-                        if 'strategic_recommendations' in analysis and analysis['strategic_recommendations']:
-                            st.markdown("**Strategic Suggestions:**")
-                            for rec in analysis['strategic_recommendations']:
-                                st.markdown(f"• {rec}")
-                
-                # Display Each Role Coordination Guidance
-                if 'guidance' in coord_data and coord_data['guidance']:
-                    st.markdown("#### 🎯 Coordination Guidance for Each Role")
-                    guidance = coord_data['guidance']
-                    
-                    # forEachRoleCreate Guidance Card
-                    roles_display = {
-                        'retailer': '🏪 Retailer',
-                        'wholesaler': '🏢 Wholesaler', 
-                        'distributor': '🚚 Distributor',
-                        'manufacturer': '🏭 Manufacturer'
-                    }
-                    
-                    # Display Coordination Suggestions Table
-                    guidance_data = []
-                    for role, display_name in roles_display.items():
-                        if role in guidance and guidance[role]:
-                            st.markdown(f"**{display_name}**")
-                            st.info(f"💡 {guidance[role]}")
-                            
-                            # IfhasoriginalData，AddtoTablein
-                            if 'raw_guidance' in coord_data and role in coord_data['raw_guidance']:
-                                raw_data = coord_data['raw_guidance'][role]
-                                if raw_data.get('intervention_required', False):
-                                    guidance_data.append({
-                                        'Round': round_num,
-                                        'Role': display_name,
-                                        'Suggested Order Quantity': raw_data.get('order_quantity', 'N/A'),
-                                        'Reason': raw_data.get('reason', 'N/A'),
-                                        'Priority': raw_data.get('priority', 'N/A')
-                                    })
-                        elif role in guidance:
-                            # Display No Suggestions Info
-                            st.markdown(f"**{display_name}**")
-                            st.success("✅ No adjustments needed overall, current decisions are reasonable")
-                    
-                    # IfhasCoordinationSuggestionsData，DisplayTableandDownloadButton
-                    if guidance_data:
-                        st.markdown("#### 📋 Coordination Suggestions Details")
-                        import pandas as pd
-                        guidance_df = pd.DataFrame(guidance_data)
-                        st.dataframe(guidance_df, use_container_width=True)
-                        
-                        # ProvideCSVDownload
-                        csv = guidance_df.to_csv(index=False, encoding='utf-8-sig')
-                        st.download_button(
-                            label=f"📥 DownloadNo.{round_num}RoundCoordinationSuggestionsCSV",
-                            data=csv,
-                            file_name=f'CoordinationSuggestions_No.{round_num}Round.csv',
-                            mime='text/csv'
-                        )
-                
-                # Display Mind Map
-                if 'mindmap' in coord_data and coord_data['mindmap']:
-                    st.markdown("#### 🧠 Supply Chain Mind Map")
-                    st.markdown(coord_data['mindmap'])
-                    
-                    # ProvideGenerate Visualization Mind MapButton
-                    if st.button(f"🗺️ Generate Visualization Mind Map (No.{round_num}Round)", key=f"mindmap_{round_num}"):
-                        try:
-                            # Call MCP service to generate mind map
-                            import subprocess
-                            import tempfile
-                            import os
-                            
-                            # CreateTempFileSavemarkdown
-                            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
-                                f.write(coord_data['mindmap'])
-                                temp_file = f.name
-                            
-                            st.success(f"✅ Mind map markdown is ready. You can use the MCP tool to generate visualization.")
-                            st.code(coord_data['mindmap'], language='``')
-                            
-                            # CleanupTempFile
-                            os.unlink(temp_file)
-                            
-                        except Exception as e:
-                            st.error(f"Mind map generation failed: {e}")
-        
-        # Coordination Effect Summary
-        if len(result.coordination_history) > 1:
-            st.markdown("---")
-            st.markdown("### 📊 Coordination Effect Summary")
-            
-            # AnalysisCoordination PriorityChange
-            priorities = [coord.get('analysis', {}).get('coordination_priority', 'N/A') 
-                         for coord in result.coordination_history]
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown("**Coordination PriorityChange:**")
-                for i, priority in enumerate(priorities, 1):
-                    st.markdown(f"No.{i}Round: {priority}")
-            
-            with col2:
-                # Statistics: Most Common Coordination Focus
-                from collections import Counter
-                priority_counts = Counter([p for p in priorities if p != 'N/A'])
-                if priority_counts:
-                    most_common = priority_counts.most_common(1)[0]
-                    st.metric("Main Coordination Focus", most_common[0], f"appears {most_common[1]} times")
-            
-            # DisplayAll Coordination SuggestionsSummaryTotal
-            st.markdown("### 📋 All Coordination Suggestions Summary")
-            all_guidance_data = []
-            roles_display = {
-                'retailer': '🏪 Retailer',
-                'wholesaler': '🏢 Wholesaler', 
-                'distributor': '🚚 Distributor',
-                'manufacturer': 'โรงงาน Manufacturer'
-            }
-            
-            for coord_data in result.coordination_history:
-                round_num = coord_data.get('round', 0)
-                if 'raw_guidance' in coord_data:
-                    for role, display_name in roles_display.items():
-                        if role in coord_data['raw_guidance']:
-                            raw_data = coord_data['raw_guidance'][role]
-                            if raw_data.get('intervention_required', False):
-                                all_guidance_data.append({
-                                    'Round': round_num,
-                                    'Role': display_name,
-                                    'Suggested Order Quantity': raw_data.get('order_quantity', 'N/A'),
-                                    'Reason': raw_data.get('reason', 'N/A'),
-                                    'Priority': raw_data.get('priority', 'N/A')
-                                })
-            
-            if all_guidance_data:
-                import pandas as pd
-                all_guidance_df = pd.DataFrame(all_guidance_data)
-                st.dataframe(all_guidance_df, use_container_width=True)
+        """Coordinator analysis — disabled"""
+        st.info("Coordinator feature has been disabled.")
+        return
 
-                
-                # ProvideCompleteCSVDownload
-                csv_all = all_guidance_df.to_csv(index=False, encoding='utf-8-sig')
-                st.download_button(
-                    label="📥 DownloadAll Coordination SuggestionsCSV",
-                    data=csv_all,
-                    file_name='All Coordination Suggestions.csv',
-                    mime='text/csv'
-                )
-            else:
-                st.info("📋 TempNo coordination suggestions data")
-    
     def save_all_data(self, result, bullwhip_metrics, ui_config):
         """Save all simulation data to a ZIP file"""
         try:
@@ -3911,7 +3331,7 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
                 'config': ui_config,
                 'round_history': result.round_history,
                 'total_cost': result.total_cost,
-                'coordination_history': getattr(result, 'coordination_history', [])
+
             }
             with open(os.path.join(temp_dir, 'simulation_result.json'), 'w', encoding='utf-8') as f:
                 json.dump(result_dict, f, indent=2, ensure_ascii=False, default=str)
@@ -3977,25 +3397,7 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
             pd.DataFrame(inventory_data).to_csv(os.path.join(temp_dir, 'InventoryData.csv'), 
                                               index=False, encoding='utf-8-sig')
             
-            # 6. Save Coordinator Analysis（Ifhas）
-            if hasattr(result, 'coordination_history') and result.coordination_history:
-                coord_analysis = []
-                for i, coord_data in enumerate(result.coordination_history, 1):
-                    coord_analysis.append({
-                        'Roundtimes': i,
-                        'AnalysisContent': coord_data.get('analysis', {}),
-                        'Mind Map': coord_data.get('mindmap', '')
-                    })
-                
-                with open(os.path.join(temp_dir, 'CoordinatorAnalysis.json'), 'w', encoding='utf-8') as f:
-                    json.dump(coord_analysis, f, indent=2, ensure_ascii=False, default=str)
-                
-                # Save Mind Mapmarkdown
-                for i, coord_data in enumerate(result.coordination_history, 1):
-                    if coord_data.get('mindmap'):
-                        with open(os.path.join(temp_dir, f'Mind Map_No.{i}Round.md'), 'w', encoding='utf-8') as f:
-                            f.write(coord_data['mindmap'])
-            
+            # 6. Coordinator Analysis — disabled
             # 7. CreateZIPFile
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             zip_filename = f'BeerGame Simulation Data_{timestamp}.zip'
@@ -4178,17 +3580,17 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
             self.display_summary_metrics(st.session_state.result, st.session_state.bullwhip_metrics)
             
             # ChartDisplay
-            tabs = ["🏢 3D Supply Chain", "📊 Inventory Level", "📈 Order & Demand", "🚚 Shipment Quantity", "💰 Cost Analysis", "🔄 Bullwhip Effect", "📊 Decision Statistics", "🤝 Coordinator Analysis"]
+            tabs = ["🏢 3D Supply Chain", "📊 Inventory Level", "📈 Order & Demand", "🚚 Shipment Quantity", "💰 Cost Analysis", "🔄 Bullwhip Effect", "📊 Decision Statistics"]
             
             # IfEnableDoneDebug Features，AddDebug Tag
             if ui_config.get('enable_prompt_debug', False):
                 tabs.append("🔧 Prompt Adjust / Debug")
             
             tab_objects = st.tabs(tabs)
-            tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = tab_objects[:8]
-            
+            tab1, tab2, tab3, tab4, tab5, tab6, tab7 = tab_objects[:7]
+
             # IfhasDebug Tag，Getit
-            debug_tab = tab_objects[8] if len(tab_objects) > 8 else None
+            debug_tab = tab_objects[7] if len(tab_objects) > 7 else None
             
             with tab1:
                 st.markdown("### 🏢 3D Supply Chain Dynamic Visualization")
@@ -4288,9 +3690,6 @@ Please generate a Markdown-formatted Bullwhip Effect Analysis Mind Map，**Focus
             
             with tab7:
                 self.display_decision_statistics(st.session_state.result)
-            
-            with tab8:
-                self.display_coordinator_analysis(st.session_state.result)
             
             # Debug Panel
             if debug_tab is not None:
@@ -4735,8 +4134,6 @@ Decision Explanation:
                 self.bullwhip_metrics = data.get('bullwhip_metrics', {})
                 self.simulation_time = data.get('simulation_time', 0)
                 self.config = data.get('config', {})
-                self.coordination_history = data.get('coordination_history', [])
-                
                 # IfNoagent_states，fromround_historyinReconstruct
                 if not self.agent_states and self.round_history:
                     last_round = self.round_history[-1] if self.round_history else {}
@@ -4763,8 +4160,6 @@ Decision Explanation:
                 self.total_rounds = results.get('rounds', 20)
                 self.agent_costs = results.get('agents', {})
                 self.simulation_time = 0
-                self.coordination_history = []
-                
                 # CreateSimulateround_history
                 self.round_history = []
                 for i in range(self.total_rounds):
@@ -5089,7 +4484,7 @@ Decision Explanation:
         
         # GeneralSuggestions
         if cv > 1.0:
-            st.warning("⚠️ Unstable Demand General Suggestions: CV is very high. Strongly suggest enabling Coordinator Feature and Information Sharing to improve Supply Chain Stability.")
+            st.warning("⚠️ Unstable Demand General Suggestions: CV is very high. Strongly suggest enabling Information Sharing to improve Supply Chain Stability.")
 
     def _show_unstable_demand_analysis(self, demand_pattern: str, preview_demands: list):
         """Display volatile demand pattern characteristics analysis"""
