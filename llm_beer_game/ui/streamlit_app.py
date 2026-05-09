@@ -527,12 +527,12 @@ class StreamlitBeerGameApp:
         # Lead Time Config
         st.sidebar.header("⏰ Lead Time Config")
         
-        # Order Lead Time
-        st.sidebar.subheader("📦 Order Lead Time")
-        retailer_order_lead_time = st.sidebar.slider("Retailer Order Lead Time", 0, 5, 0)
-        wholesaler_order_lead_time = st.sidebar.slider("Wholesaler Order Lead Time", 0, 5, 0)
-        distributor_order_lead_time = st.sidebar.slider("Distributor Order Lead Time", 0, 5, 0)
-        manufacturer_order_lead_time = st.sidebar.slider("Manufacturer Order Lead Time", 0, 5, 0)
+        # Order Lead Time (collapsible)
+        with st.sidebar.expander("📦 Order Lead Time", expanded=False):
+            retailer_order_lead_time = st.slider("Retailer Order Lead Time", 0, 5, 0)
+            wholesaler_order_lead_time = st.slider("Wholesaler Order Lead Time", 0, 5, 0)
+            distributor_order_lead_time = st.slider("Distributor Order Lead Time", 0, 5, 0)
+            manufacturer_order_lead_time = st.slider("Manufacturer Order Lead Time", 0, 5, 0)
         
         # Transport Lead Time
         st.sidebar.subheader("🚚 Transport Lead Time")
