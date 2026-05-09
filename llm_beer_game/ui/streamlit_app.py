@@ -103,24 +103,24 @@ class StreamlitBeerGameApp:
     
     def __init__(self):
         self.config_manager = ConfigManager()
-        # Unified color config, consistent with visualizer.py
+        # Unified color config — muted academic palette
         self.role_colors = {
-            'retailer': '#FF6B6B',
-            'wholesaler': '#4ECDC4',
-            'distributor': '#45B7D1',
-            'manufacturer': '#96CEB4'
+            'retailer': '#DC5C5C',
+            'wholesaler': '#3BA99E',
+            'distributor': '#3A8FB5',
+            'manufacturer': '#7BAF95'
         }
-        # Inventory status color config - unified three-state color standard
+        # Inventory status color config — three-state color standard
         self.inventory_status_colors = {
-            'positive': '#2196F3',   # Blue indicates positive inventory (sufficient)
-            'zero': '#FFC107',       # Yellow indicates zero inventory (no stock)
-            'negative': '#F44336'    # Red indicates negative inventory (backorder)
+            'positive': '#2563EB',   # Blue — sufficient inventory
+            'zero': '#D97706',       # Amber — no stock
+            'negative': '#DC2626'    # Red — backorder
         }
         # Other status color config
         self.status_colors = {
-            'shortage': '#F44336',   # Red for shortage (consistent with negative)
-            'empty': '#FFC107',      # Yellow for no stock (consistent with zero)
-            'demand': '#FECA57'      # Demand line color
+            'shortage': '#DC2626',   # Red — shortage
+            'empty': '#D97706',      # Amber — no stock
+            'demand': '#F59E0B'      # Amber — demand line
         }
         self.setup_page_config()
         
@@ -132,7 +132,113 @@ class StreamlitBeerGameApp:
             layout="wide",
             initial_sidebar_state="expanded"
         )
-        
+
+    def _inject_global_styles(self):
+        """Inject centralized academic CSS styles"""
+        st.markdown("""
+        <style>
+        /* === Sidebar === */
+        [data-testid="stSidebar"] {
+            background-color: #F1F5F9;
+            border-right: 1px solid #E2E8F0;
+        }
+
+        /* === Typography === */
+        h1 { font-size: 1.75rem; font-weight: 700; color: #1E293B; letter-spacing: -0.01em; }
+        h2 { font-size: 1.35rem; font-weight: 600; color: #1E293B; }
+        h3 { font-size: 1.15rem; font-weight: 600; color: #334155; }
+        h4 { font-size: 1rem; font-weight: 500; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* === Academic Metric Card === */
+        .metric-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            padding: 18px 16px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            text-align: center;
+            margin: 4px 0;
+        }
+        .metric-card .label {
+            font-size: 0.7rem;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+        .metric-card .value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1E293B;
+        }
+
+        /* === Left-Accent Card === */
+        .accent-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-left: 4px solid #1B3A5C;
+            border-radius: 0 6px 6px 0;
+            padding: 14px 18px;
+            margin: 10px 0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+
+        /* === Section Divider === */
+        hr {
+            border: none;
+            border-top: 1px solid #E2E8F0;
+            margin: 24px 0;
+        }
+
+        /* === Progress Display === */
+        .progress-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1B3A5C;
+            margin-bottom: 8px;
+        }
+        .sim-info-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin: 10px 0;
+        }
+
+        /* === Primary Button === */
+        .stButton > button[kind="primary"] {
+            background-color: #1B3A5C;
+            border: 1px solid #1B3A5C;
+            color: #FFFFFF;
+        }
+        .stButton > button[kind="primary"]:hover {
+            background-color: #0F2847;
+            border-color: #0F2847;
+        }
+
+        /* === Expander Headers === */
+        .streamlit-expanderHeader {
+            font-weight: 500;
+            color: #334155;
+            font-size: 0.9rem;
+        }
+
+        /* === Metric Widgets === */
+        [data-testid="stMetricValue"] {
+            font-weight: 600;
+            color: #1E293B;
+        }
+        [data-testid="stMetricLabel"] {
+            color: #64748B;
+        }
+
+        /* === Sidebar Radio Buttons === */
+        [data-testid="stSidebar"] .stRadio label {
+            color: #334155;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
     def render_sidebar(self) -> Dict[str, Any]:
         """Render sidebar parameter configuration"""
         st.sidebar.title("🍺 Simulation Parameter Configuration")
@@ -510,12 +616,12 @@ class StreamlitBeerGameApp:
                     
                     avg_demand = np.mean(preview_demands)
                     if avg_demand < 5:
-                        st.info("💡 Average Demand is Low，Suggestions: Adjust initial Inventory appropriately to avoid excessive Inventory")
+                        st.info("💡 Average demand is low. Suggestion: adjust initial inventory appropriately to avoid excessive inventory buildup.")
                     elif avg_demand > 20:
-                        st.info("💡 Average Demand is High，Suggestions: Increase initial Inventory or shorten Lead Time")
+                        st.info("💡 Average demand is high. Suggestion: increase initial inventory or shorten lead time.")
                     
                     if cv > 0.8:
-                        st.warning("⚠️ Demand Variability is High，Suggestions: Enable Information Sharing to improve Supply Chain Coordination")
+                        st.warning("⚠️ Demand variability is high. Suggestion: enable information sharing to improve supply chain coordination.")
                     
                     # Volatile Demand Pattern - Special Suggestions
                     if demand_category == "Unstable Demand":
@@ -1707,7 +1813,7 @@ class StreamlitBeerGameApp:
                     role_config.initial_inventory = int(ui_config[f"{role}_initial_inventory"]) if ui_config[f"{role}_initial_inventory"] is not None else role_config.initial_inventory
                 except Exception:
                     pass  # Maintain default
-            # Initial In-Transit（List）
+            # Initial in-transit (list)
             if f"{role}_initial_in_transit" in ui_config:
                 init_transit = ui_config.get(f"{role}_initial_in_transit")
                 # Only parse when list is set, already parsed in UI stage
@@ -1875,7 +1981,7 @@ class StreamlitBeerGameApp:
             demand_config.inventory_sensitive_stockout_penalty = ui_config["inventory_penalty"]
             demand_config.inventory_sensitive_substitution_rate = ui_config["inventory_substitution"]
         
-        # VolatileDemand Pattern
+        # Volatile demand patterns
         elif pattern == "Autoregressive":
             demand_config.pattern_type = DemandPatternType.AUTOREGRESSIVE
             demand_config.ar_base_demand = ui_config["ar_base_demand"]
@@ -1983,16 +2089,16 @@ class StreamlitBeerGameApp:
         config.wholesaler_transport_lead_time = ui_config.get("wholesaler_transport_lead_time", 2)
         config.distributor_transport_lead_time = ui_config.get("distributor_transport_lead_time", 2)
         
-        # AddCoordinator Config
-        # AddAdaptiveOrder Quantity Limit Config
+        # Apply coordinator config
+        # Apply adaptive order quantity limit config
         if ui_config.get("enable_adaptive_limits", False):
-            # EnableAdaptiveLimit
+            # Enable adaptive limits
             config.adaptive_limits.enabled = True
             config.adaptive_limits.method = ui_config.get("adaptive_method", "ratio")
             config.adaptive_limits.base_min_order = ui_config.get("adaptive_base_min", 3)
             config.adaptive_limits.base_max_order = ui_config.get("adaptive_base_max", 8)
             
-            # Based onSelectMethodSetParameter
+            # Set parameters based on selected method
             if config.adaptive_limits.method == "ratio":
                 config.adaptive_limits.min_ratio = ui_config.get("min_ratio", 0.5)
                 config.adaptive_limits.max_ratio = ui_config.get("max_ratio", 1.5)
@@ -2004,13 +2110,13 @@ class StreamlitBeerGameApp:
                 config.adaptive_limits.forecast_horizon = ui_config.get("forecast_horizon", 3)
                 config.adaptive_limits.forecast_weight = ui_config.get("forecast_weight", 0.7)
             
-            # SetGeneralParameter
+            # Set general parameters
             config.adaptive_limits.adaptation_rate = ui_config.get("adaptation_rate", 0.3)
             
             print(f"✅ Adaptive Order Quantity Limit enabled: Method={config.adaptive_limits.method}")
             print(f"   Base Limit Range: [{config.adaptive_limits.base_min_order}, {config.adaptive_limits.base_max_order}]")
         else:
-            # DisabledAdaptiveLimit
+            # Disable adaptive limits
             config.adaptive_limits.enabled = False
             print(f"❌ Adaptive Order Quantity Limit disabled")
         
@@ -2023,7 +2129,7 @@ class StreamlitBeerGameApp:
             'category': demand_category
         }
         
-        # Based onDemand TypeAddCorrespondingParameter
+        # Add parameters based on demand type
         if demand_pattern == "Random Demand":
             config.update({
                 'min_demand': local_vars.get('random_min', 1),
@@ -2130,75 +2236,39 @@ class StreamlitBeerGameApp:
     def run_simulation(self, config, realtime_callback=None, progress_container=None, show_realtime_status=False) -> tuple:
         """Run Simulation"""
         try:
-            # SetRandom Seed
+            # Set random seed
             set_random_seed(config.simulation.random_seed)
             
-            # DisplaySimulationStartInfo
+            # Display simulation start info
             if progress_container:
-                # AddCustomCSSStyle
-                progress_container.markdown("""
-                <style>
-                .progress-header {
-                    background: linear-gradient(90deg, #1f77b4, #ff7f0e);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    font-size: 24px;
-                    font-weight: bold;
-                    text-align: center;
-                    margin-bottom: 20px;
-                }
-                .simulation-info {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 15px;
-                    border-radius: 10px;
-                    margin-bottom: 20px;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                }
-                .progress-container {
-                    background: #f8f9fa;
-                    padding: 20px;
-                    border-radius: 15px;
-                    border: 2px solid #e9ecef;
-                    margin-bottom: 15px;
-                }
-                .progress-stats {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 10px;
-                    font-weight: bold;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-                
-                progress_container.markdown('<div class="progress-header">🚀 Simulation in Progress</div>', unsafe_allow_html=True)
+                # Uses global CSS classes from _inject_global_styles()
+                progress_container.markdown('<div class="progress-header">Simulation in Progress</div>', unsafe_allow_html=True)
                 progress_container.markdown(f'''
-                <div class="simulation-info">
+                <div class="sim-info-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <span style="font-size: 18px;">📋 Simulation Config</span><br>
-                            <span style="font-size: 14px; opacity: 0.9;">Total Rounds: {config.simulation.total_weeks} | Demand Pattern: {config.demand.pattern_type.value}</span>
+                            <span style="font-size: 1rem; font-weight: 600; color: #1E293B;">Simulation Config</span><br>
+                            <span style="font-size: 0.85rem; color: #64748B;">Total Rounds: {config.simulation.total_weeks} &nbsp;|&nbsp; Demand Pattern: {config.demand.pattern_type.value}</span>
                         </div>
-                        <div style="font-size: 32px;">🎮</div>
                     </div>
                 </div>
                 ''', unsafe_allow_html=True)
+
+                # Create progress display area
+                progress_container.markdown('<div class="sim-info-card">', unsafe_allow_html=True)
                 
-                # CreateProgressDisplayArea
-                progress_container.markdown('<div class="progress-container">', unsafe_allow_html=True)
-                
-                # AddOverallProgressItem
+                # Add overall progress bar
                 total_weeks = config.simulation.total_weeks
                 progress_stats_container = progress_container.empty()
                 overall_progress = progress_container.progress(0)
                 overall_status = progress_container.empty()
                 
-                # InitializeProgressStatistics
+                # Initialize progress statistics
                 progress_stats_container.markdown(f'''
-                <div class="progress-stats">
-                    <span>🎯 Progress: 0/{total_weeks} Round</span>
-                    <span>⏱️ Status: Ready to Start</span>
-                    <span>📊 Completion Rate: 0.0%</span>
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:500;color:#334155;">
+                    <span>Progress: 0/{total_weeks} Round</span>
+                    <span>Status: Ready to Start</span>
+                    <span>Completion Rate: 0.0%</span>
                 </div>
                 ''', unsafe_allow_html=True)
                 
@@ -2239,10 +2309,10 @@ class StreamlitBeerGameApp:
             else:
                 llm_manager = LLMManager([MockLLMClient()])
             
-            # CreateSupply ChainAgent
+            # Create supply chain agents
             agents = create_supply_chain(config, llm_client=llm_manager)
             
-            # Based onConfigCreate Demand Pattern
+            # Create demand pattern based on config
             dc = config.demand
             ptype = dc.pattern_type.value
 
@@ -2305,7 +2375,7 @@ class StreamlitBeerGameApp:
             
 
             
-            # CreateGameEngine
+            # Create game engine
             engine = GameEngine(
                 config,
                 agents,
@@ -2314,35 +2384,35 @@ class StreamlitBeerGameApp:
                 llm_client=None
             )
             
-            # EnsureGameStatusfullyReSet
+            # Ensure game state is fully reset
             engine.reset()
             
-            # CreateProgressCallback FuncNumber
+            # Create progress callback
             def progress_callback(round_num, round_data):
                 nonlocal progress_stats_container, overall_progress, overall_status
-                print(f"🔄 Progress callback called: Round {round_num}")  # AdjustTryOutput
-                sys.stdout.flush()  # StrongProductionRefreshNewOutput
+                print(f"Progress callback: Round {round_num}")  # Debug output
+                sys.stdout.flush()  # Force flush output
                 if progress_container:
                     with progress_container:
-                        # UpdateOverallProgressItem
+                        # Update overall progress
                         progress_percentage = round_num / total_weeks
                         overall_progress.progress(progress_percentage)
                         
-                        # Usenative componentsDisplayProgressStatistics
-                        progress_stats_container.info(f"🎯 Progress: {round_num}/{total_weeks} Round | ⏱️ Status: Runin | 📊 Completion Rate: {progress_percentage*100:.1f}%")
+                        # Display progress statistics via native components
+                        progress_stats_container.info(f"Progress: {round_num}/{total_weeks} rounds | Status: Running | Completion: {progress_percentage*100:.1f}%")
                         
-                        # DisplayCurrentRoundInfo
+                        # Display current round info
                         overall_status.success(f"🎮 Running Round {round_num} - Customer Demand: {round_data['customer_demand']} | Round Cost: {round_data['total_cost']:.1f}")
                         
                         # Only display each role's real-time status when user selects the option
                         if show_realtime_status:
                             # Use collapsible expander to display each role's real-time status
                             with st.expander("📊 Each Role Real-time Status", expanded=False):
-                                # CreateAgentStatusDisplay
+                                # Create agent status display
                                 role_names = {'retailer': 'Retailer', 'wholesaler': 'Wholesaler', 'distributor': 'Distributor', 'manufacturer': 'Manufacturer'}
                                 role_icons = {'retailer': '🏪', 'wholesaler': '🏢', 'distributor': '🚚', 'manufacturer': '🏭'}
                                 
-                                # UseColumnLayoutDisplayAgentStatus
+                                # Display agent status in column layout
                                 cols = st.columns(2)
                                 col_idx = 0
                                 
@@ -2352,9 +2422,9 @@ class StreamlitBeerGameApp:
                                         end_state = agent_data['end_state']
                                         
                                         with cols[col_idx % 2]:
-                                            # UseSubexpandercomponentsDisplayDetailedInfo
+                                            # Display detailed info in sub-expanders
                                             with st.expander(f"{role_icons[role]} {role_names[role]}", expanded=True):
-                                                # CreateSubColumnDisplayDetailedInfo
+                                                # Create sub-columns for detailed metrics
                                                 sub_cols = st.columns(2)
                                                 with sub_cols[0]:
                                                     st.metric("📦 Inventory", end_state['inventory'])
@@ -2371,39 +2441,39 @@ class StreamlitBeerGameApp:
                 realtime_callback=realtime_callback
             )
             
-            # DisplaySimulation CompletedInfo
+            # Display simulation completed info
             if progress_container:
                 with progress_container:
-                    # CompletedProgressItem
+                    # Completed progress item
                     overall_progress.progress(1.0)
-                    progress_stats_container.success(f"🎯 Progress: {total_weeks}/{total_weeks} Round | ✅ Status: Completed | 📊 Completion Rate: 100.0%")
+                    progress_stats_container.success(f"🎯 Progress: {total_weeks}/{total_weeks} rounds | ✅ Status: Completed | 📊 Completion Rate: 100.0%")
                 
                 overall_status.success(f"🎉 Simulation completed! Total rounds run: {result.total_rounds} Round")
                 
-                # Display finalStatistics Info
+                # Display final statistics
                 final_stats_html = f'''
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
-                    <h3 style="margin: 0 0 15px 0;">🏆 Simulation Completed - Statistics</h3>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px;">
-                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
-                            <div style="font-size: 24px; font-weight: bold;">{result.total_rounds}</div>
-                            <div style="font-size: 12px; opacity: 0.9;">Total Rounds</div>
+                <div class="accent-card" style="border-left-color:#0D9488; text-align:center; padding:20px;">
+                    <h3 style="margin:0 0 16px 0; color:#1E293B; font-size:1.1rem;">Simulation Completed &mdash; Statistics</h3>
+                    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px;">
+                        <div style="border-bottom:2px solid #E2E8F0; padding:12px 8px;">
+                            <div style="font-size:1.5rem; font-weight:700; color:#1E293B;">{result.total_rounds}</div>
+                            <div style="font-size:0.7rem; color:#64748B; text-transform:uppercase; letter-spacing:0.05em;">Total Rounds</div>
                         </div>
-                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
-                            <div style="font-size: 24px; font-weight: bold;">{len(result.round_history)}</div>
-                            <div style="font-size: 12px; opacity: 0.9;">Data Record</div>
+                        <div style="border-bottom:2px solid #E2E8F0; padding:12px 8px;">
+                            <div style="font-size:1.5rem; font-weight:700; color:#1E293B;">{len(result.round_history)}</div>
+                            <div style="font-size:0.7rem; color:#64748B; text-transform:uppercase; letter-spacing:0.05em;">Data Records</div>
                         </div>
-                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px;">
-                            <div style="font-size: 24px; font-weight: bold;">{result.total_cost:.0f}</div>
-                            <div style="font-size: 12px; opacity: 0.9;">Total Cost</div>
+                        <div style="border-bottom:2px solid #E2E8F0; padding:12px 8px;">
+                            <div style="font-size:1.5rem; font-weight:700; color:#1E293B;">{result.total_cost:.0f}</div>
+                            <div style="font-size:0.7rem; color:#64748B; text-transform:uppercase; letter-spacing:0.05em;">Total Cost</div>
                         </div>
                     </div>
                 </div>
                 '''
                 progress_container.markdown(final_stats_html, unsafe_allow_html=True)
-                
-                progress_container.markdown("### 🏁 Simulation Completed")
-                progress_container.success(f"✅ Completed {result.total_rounds} Round，Total Cost: {result.total_cost:.2f}")
+
+                progress_container.markdown("### Simulation Completed")
+                progress_container.success(f"Completed {result.total_rounds} rounds &mdash; Total Cost: {result.total_cost:.2f}")
                 
                 # Display final Cost Analysis
                 progress_container.markdown("#### 💰 Final Cost Analysis")
@@ -2413,7 +2483,7 @@ class StreamlitBeerGameApp:
                     percentage = (cost / result.total_cost * 100) if result.total_cost > 0 else 0
                     progress_container.text(f"   {role_names[role]}: {cost:.2f} ({percentage:.1f}%)")
             
-            # AnalysisBullwhip Effect
+            # Analyze bullwhip effect
             analyzer = BullwhipAnalyzer()
             bullwhip_metrics = analyzer.analyze_simulation_result(result)
             
@@ -2421,24 +2491,24 @@ class StreamlitBeerGameApp:
             
         except Exception as e:
             if progress_container:
-                progress_container.error(f"❌ SimulationFailed: {str(e)}")
+                progress_container.error(f"❌ Simulation failed: {str(e)}")
             return None, None, str(e)
     
     def format_inventory_display(self, inventory_value):
-        """Format Inventory Display，Negative Value displays as Stockout Quantity"""
+        """Format inventory display - negative value shows as stockout quantity"""
         if inventory_value < 0:
-            return f"Stockout {abs(inventory_value)} Units"
+            return f"Backorder {abs(inventory_value)} units"
         elif inventory_value == 0:
             return "No Inventory"
         else:
-            return f"{inventory_value} Units"
-    
+            return f"{inventory_value} units"
+
     def format_backorder_display(self, backorder_value):
-        """Format Stockout Quantity Display"""
+        """Format backorder display"""
         if backorder_value > 0:
-            return f"Stockout {backorder_value} Units"
+            return f"Backorder {backorder_value} units"
         else:
-            return "No Stockout"
+            return "No Backorder"
     
     def plot_inventory_levels(self, result):
         """Plot inventory level chart"""
@@ -2451,51 +2521,51 @@ class StreamlitBeerGameApp:
         colors = [self.role_colors[role] for role in roles]
         
         for i, (role, color) in enumerate(zip(roles, colors)):
-            # fromround_historyinExtractInventoryData
+            # Extract inventory data from round_history
             weeks = []
             inventory = []
             hover_text = []
             for round_data in result.round_history:
                 if role in round_data['agents']:
                     weeks.append(round_data['round'])
-                    # CalculateNetInventory:Inventory - StockoutQuantity（Negative Value Indicates Stockout）
+                    # Calculate net inventory: inventory minus backorder (negative = stockout)
                     inv_value = round_data['agents'][role]['end_state'].get('inventory', 0)
                     backorder_value = round_data['agents'][role]['end_state'].get('backorder', 0)
                     net_inventory = inv_value - backorder_value
                     inventory.append(net_inventory)
-                    # AddHover textThisDisplayInventoryStatus
+                    # Add hover text to display inventory status
                     if net_inventory < 0:
-                        hover_text.append(f"No.{round_data['round']}Round: Stockout {abs(net_inventory)} Units")
+                        hover_text.append(f"Round {round_data['round']}: Backorder {abs(net_inventory)} units")
                     elif net_inventory == 0:
-                        hover_text.append(f"No.{round_data['round']}Round: No Inventory")
+                        hover_text.append(f"Round {round_data['round']}: No Inventory")
                     else:
-                        hover_text.append(f"No.{round_data['round']}Round: {net_inventory} Units")
+                        hover_text.append(f"Round {round_data['round']}: {net_inventory} units")
             
             row = i // 2 + 1
             col = i % 2 + 1
             
-            # Based onInventoryValueSetUnifiedStatusColor:NegativeValueRed，ZeroValueYellow，PositiveValueGreen
+            # Set status color by inventory value: negative=red, zero=yellow, positive=green
             marker_colors = []
             line_colors = []
             for inv in inventory:
                 if inv < 0:
-                    marker_colors.append(self.inventory_status_colors['negative'])  # RedIndicatesStockout
+                    marker_colors.append(self.inventory_status_colors['negative'])  # Red = stockout
                     line_colors.append(self.inventory_status_colors['negative'])
                 elif inv == 0:
-                    marker_colors.append(self.inventory_status_colors['zero'])      # YellowIndicatesNo Inventory
+                    marker_colors.append(self.inventory_status_colors['zero'])      # Yellow = no inventory
                     line_colors.append(self.inventory_status_colors['zero'])
                 else:
-                    marker_colors.append(self.inventory_status_colors['positive'])  # GreenIndicatesPositiveInventory
+                    marker_colors.append(self.inventory_status_colors['positive'])  # Green = positive inventory
                     line_colors.append(self.inventory_status_colors['positive'])
-            
-            # UseUnifiedInventoryStatusColorPlotLineandMarker
+
+            # Use unified status color for plot markers
             fig.add_trace(
                 go.Scatter(
                     x=weeks, y=inventory,
                     mode='lines+markers',
-                    name=f'{role}Inventory',
-                    line=dict(color=color, width=2),  # KeepRoleoriginal colorForLine
-                    marker=dict(size=8, color=marker_colors),  # UseStatusColorMarker
+                    name=f'{role} Inventory',
+                    line=dict(color=color, width=2),  # Keep role's original color for line
+                    marker=dict(size=8, color=marker_colors),  # Status color for markers
                     hovertext=hover_text,
                     hoverinfo='text'
                 ),
@@ -2503,7 +2573,7 @@ class StreamlitBeerGameApp:
             )
         
         fig.update_layout(
-            title='Supply Chain Each Stage Inventory Level（Negative Value Indicates Stockout）',
+            title='Supply Chain Inventory Level by Stage (Negative = Stockout)',
             height=600,
             showlegend=False
         )
@@ -2536,14 +2606,14 @@ class StreamlitBeerGameApp:
                     in_transit.append(total_in_transit)
                     incoming = end_state.get('incoming_shipment', 0)
                     if role == 'manufacturer':
-                        hover_text.append(f"No.{round_data['round']}Round: inProduction {total_in_transit} | Next PeriodCompleted {incoming}")
+                        hover_text.append(f"Round {round_data['round']}: In Production {total_in_transit} | Next Period Complete {incoming}")
                     else:
-                        hover_text.append(f"No.{round_data['round']}Round: inTransit {total_in_transit} | Next PeriodtoArrival {incoming}")
+                        hover_text.append(f"Round {round_data['round']}: In Transit {total_in_transit} | Next Period Arrival {incoming}")
 
             row = i // 2 + 1
             col = i % 2 + 1
 
-            series_name = f"{name}inProduction" if role == 'manufacturer' else f"{name}inTransit"
+            series_name = f"{name} In Production" if role == 'manufacturer' else f"{name} In Transit"
             fig.add_trace(
                 go.Scatter(
                     x=weeks, y=in_transit,
@@ -2569,7 +2639,7 @@ class StreamlitBeerGameApp:
         """Plot order and demand chart"""
         fig = go.Figure()
         
-        # ExtractDemandData
+        # Extract demand data
         demand_history = []
         for round_data in result.round_history:
             demand_history.append(round_data['customer_demand'])
@@ -2585,22 +2655,22 @@ class StreamlitBeerGameApp:
             marker=dict(size=8)
         ))
         
-        # EachTierOrder
+        # Orders per tier
         roles = ['retailer', 'wholesaler', 'distributor', 'manufacturer']
         role_names = ['Retailer', 'Wholesaler', 'Distributor', 'Manufacturer']
         colors = [self.role_colors[role] for role in roles]
         
         for role, name, color in zip(roles, role_names, colors):
-            # fromround_historyinExtractOrderData
+            # Extract order data from round_history
             orders = []
             for round_data in result.round_history:
                 if role in round_data['agents']:
                     orders.append(round_data['agents'][role].get('order_placed', 0))
-            
+
             fig.add_trace(go.Scatter(
                 x=weeks, y=orders,
                 mode='lines+markers',
-                name=f'{name}Order',
+                name=f'{name} Order',
                 line=dict(color=color, width=2),
                 marker=dict(size=6)
             ))
@@ -2627,7 +2697,7 @@ class StreamlitBeerGameApp:
             total_cost = result.agent_costs.get(role, 0)
             total_costs.append(total_cost)
         
-        # CreateBarChart
+        # Create bar chart
         fig = go.Figure(data=[
             go.Bar(
                 x=role_names,
@@ -2651,17 +2721,17 @@ class StreamlitBeerGameApp:
         """Display detailed cost analysis, including each participant's average cost per period and average total cost"""
         st.markdown("### 💰 Detailed Cost Analysis")
         
-        # GetTotal Rounds
+        # Get total rounds
         total_rounds = len(getattr(result, 'round_history', []) or [])
         if total_rounds == 0:
             st.warning("Unable to get Simulation Round Count Info")
             return
         
-        # CalculateEachRoleTotal Cost andAverageCost
+        # Calculate total and average cost per role
         roles = ['retailer', 'wholesaler', 'distributor', 'manufacturer']
         role_names = ['Retailer', 'Wholesaler', 'Distributor', 'Manufacturer']
         
-        # CreateTwo RowsLayout
+        # Create two-row layout
         col1, col2 = st.columns(2)
         
         # In columns, display each participant's detailed cost info
@@ -2673,11 +2743,11 @@ class StreamlitBeerGameApp:
                 total_cost = result.agent_costs.get(role, 0)
                 avg_cost_per_cycle = total_cost / total_rounds if total_rounds > 0 else 0
                 
-                # Usest.metricDisplayInfo
+                # Use st.metric to display info
                 st.metric(
                     label=f"{name}",
                     value=f"${total_cost:.2f}",
-                    delta=f"AverageEachPeriod: ${avg_cost_per_cycle:.2f}"
+                    delta=f"Avg per period: ${avg_cost_per_cycle:.2f}"
                 )
         
         # In Column 2 Display Overall Cost Info
@@ -2692,7 +2762,7 @@ class StreamlitBeerGameApp:
             st.metric(
                 label="Supply Chain Total Cost",
                 value=f"${total_cost:.2f}",
-                delta=f"AverageEachPeriod: ${avg_total_cost_per_cycle:.2f}"
+                delta=f"Avg per period: ${avg_total_cost_per_cycle:.2f}"
             )
             
             # Display Cost Breakdown Pie Chart
@@ -2722,7 +2792,7 @@ class StreamlitBeerGameApp:
                 "Average Each Period Cost ($)": f"{avg_cost_per_cycle:.2f}"
             })
         
-        # Create DataFrame and Display
+        # Create DataFrame and display
         import pandas as pd
         df = pd.DataFrame(cost_table_data)
         st.dataframe(df, width='stretch')
@@ -2738,17 +2808,17 @@ class StreamlitBeerGameApp:
     
     def plot_total_cost_per_round(self, result):
         """Plot per-round total cost line chart (sum of all participants' costs)"""
-        # GetTotal Rounds
+        # Get total rounds
         total_rounds = len(getattr(result, 'round_history', []) or [])
         if total_rounds == 0:
             st.warning("Unable to get Simulation Round Count Info")
             return go.Figure()
         
-        # CalculatePer Round Total Cost（All ParticipantsCostSum）
+        # Calculate per-round total cost (sum of all participants)
         total_costs_per_round = []
         weeks = list(range(1, total_rounds + 1))
         
-        # fromround_historyinExtractPer RoundEach ParticipantsCost andsumand
+        # Extract per-round cost for each participant and sum
         for round_data in result.round_history:
             round_total_cost = 0
             for role in ['retailer', 'wholesaler', 'distributor', 'manufacturer']:
@@ -2756,7 +2826,7 @@ class StreamlitBeerGameApp:
                     round_total_cost += round_data['agents'][role].get('round_cost', 0)
             total_costs_per_round.append(round_total_cost)
         
-        # CreateLine Chart
+        # Create line chart
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=weeks,
@@ -2773,12 +2843,12 @@ class StreamlitBeerGameApp:
             y=avg_cost,
             line_dash="dash",
             line_color="orange",
-            annotation_text=f"AverageCost: ${avg_cost:.2f}",
+            annotation_text=f"Avg cost: ${avg_cost:.2f}",
             annotation_position="top right"
         )
         
         fig.update_layout(
-            title='Per Round Total Cost（All ParticipantsCostSum）',
+            title='Total Cost Per Round (Sum of All Participants)',
             xaxis_title='Week',
             yaxis_title='Total Cost ($)',
             height=400,
@@ -2824,7 +2894,7 @@ class StreamlitBeerGameApp:
         )
         
         fig.update_layout(
-            title=f'Bullwhip EffectAnalysis (WholeEffect: {bullwhip_metrics.overall_bullwhip_effect:.3f})',
+            title=f'Bullwhip Effect Analysis (Overall: {bullwhip_metrics.overall_bullwhip_effect:.3f})',
             height=400,
             showlegend=False
         )
@@ -2837,24 +2907,24 @@ class StreamlitBeerGameApp:
         role_names = ['Retailer', 'Wholesaler', 'Distributor', 'Manufacturer']
         colors = [self.role_colors[role] for role in roles]
         
-        # CalculateTotal Rounds（PriorityUseround_historyLength）
+        # Calculate total rounds (prefer round_history length)
         total_rounds = len(getattr(result, 'round_history', []) or [])
         if total_rounds == 0:
-            # Ifround_historyNotavailable，thenBased oncost_historyMaxLengthestimate
+            # If round_history not available, estimate from cost_history max length
             total_rounds = max([
                 len(result.agent_states.get(role, {}).get('cost_history', []))
                 for role in roles
             ] + [0])
         weeks = list(range(1, total_rounds + 1))
         
-        # CreateUpDownTwo RowsSubChart:Up-Per Round Cost；Down-Cumulative Cost
+        # Create two-row sub-chart: top = per-round cost, bottom = cumulative cost
         fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
                             vertical_spacing=0.12,
                             subplot_titles=("Per Round Cost (Each Participants)", "Cumulative Cost (Each Participants)"))
         
         for role, name, color in zip(roles, role_names, colors):
             costs = result.agent_states.get(role, {}).get('cost_history', [])
-            # padLengthtototal_rounds
+            # Pad to total_rounds length
             if len(costs) < total_rounds:
                 costs = costs + [0] * (total_rounds - len(costs))
             else:
@@ -2863,13 +2933,13 @@ class StreamlitBeerGameApp:
             
             # Per Round Cost
             fig.add_trace(
-                go.Scatter(x=weeks, y=costs, name=f"{name}Per Round Cost",
+                go.Scatter(x=weeks, y=costs, name=f"{name} Per Round Cost",
                            line=dict(color=color, width=2)),
                 row=1, col=1
             )
             # Cumulative Cost
             fig.add_trace(
-                go.Scatter(x=weeks, y=cum_costs, name=f"{name}Cumulative Cost",
+                go.Scatter(x=weeks, y=cum_costs, name=f"{name} Cumulative Cost",
                            line=dict(color=color, width=2, dash='dot')),
                 row=2, col=1
             )
@@ -2890,7 +2960,7 @@ class StreamlitBeerGameApp:
         role_names = ['Retailer', 'Wholesaler', 'Distributor', 'Manufacturer']
         colors = [self.role_colors[role] for role in roles]
         
-        # CalculateTotal Rounds
+        # Calculate total rounds
         total_rounds = len(getattr(result, 'round_history', []) or [])
         if total_rounds == 0:
             total_rounds = max([
@@ -2901,7 +2971,7 @@ class StreamlitBeerGameApp:
         
         fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
                             vertical_spacing=0.12,
-                            subplot_titles=("Order Quantity Time Series (Each Participant)", f"RollingCVCV（window={window}）"))
+                            subplot_titles=("Order Quantity Time Series (Each Participant)", f"Rolling CV (window={window})"))
         
         for role, name, color in zip(roles, role_names, colors):
             orders = result.agent_states.get(role, {}).get('orders_history', [])
@@ -2910,14 +2980,14 @@ class StreamlitBeerGameApp:
             else:
                 orders = orders[:total_rounds]
             
-            # Top:OrderTime Series
+            # Top: order time series
             fig.add_trace(
-                go.Scatter(x=weeks, y=orders, name=f"{name}Order",
+                go.Scatter(x=weeks, y=orders, name=f"{name} Order",
                            line=dict(color=color, width=2)),
                 row=1, col=1
             )
             
-            # Bottom:RollingCV（std/mean），meanfor0WhenSet0
+            # Bottom: rolling CV (std/mean), set to 0 when mean is 0
             s = pd.Series(orders, dtype='float')
             rolling_std = s.rolling(window=window).std()
             rolling_mean = s.rolling(window=window).mean()
@@ -2926,7 +2996,7 @@ class StreamlitBeerGameApp:
             cv_values = cv.tolist()
             
             fig.add_trace(
-                go.Scatter(x=weeks, y=cv_values, name=f"{name}CV",
+                go.Scatter(x=weeks, y=cv_values, name=f"{name} CV",
                            line=dict(color=color, width=2, dash='dot')),
                 row=2, col=1
             )
@@ -2937,12 +3007,12 @@ class StreamlitBeerGameApp:
             xaxis_title='Week',
             xaxis2_title='Week',
             yaxis_title='Order Quantity',
-            yaxis2_title='CV（Rolling）'
+            yaxis2_title='CV (Rolling)'
         )
         return fig
     
     def display_summary_metrics(self, result, bullwhip_metrics):
-        """Display Summary Metric"""
+        """Display summary metrics"""
         col1, col2, col3, col4 = st.columns(4)
         
         # Calculate Total Cost
@@ -2955,7 +3025,7 @@ class StreamlitBeerGameApp:
             st.metric("Bullwhip Effect", f"{bullwhip_metrics.overall_bullwhip_effect:.3f}")
         
         with col3:
-            # fromround_historyinCalculateAverageInventory
+            # Calculate average inventory from round_history
             role_inventories = {'retailer': [], 'wholesaler': [], 'distributor': [], 'manufacturer': []}
             for round_data in result.round_history:
                 for role in role_inventories.keys():
@@ -2964,10 +3034,10 @@ class StreamlitBeerGameApp:
                         role_inventories[role].append(inventory)
             
             avg_inventory = np.mean([np.mean(inventories) for inventories in role_inventories.values() if inventories])
-            st.metric("AverageInventory", f"{avg_inventory:.1f}")
+            st.metric("Avg Inventory", f"{avg_inventory:.1f}")
         
         with col4:
-            # fromround_historyinCalculateService Level
+            # Calculate service level from round_history
             total_shortage = 0
             total_demand = 0
             for round_data in result.round_history:
@@ -3003,7 +3073,7 @@ class StreamlitBeerGameApp:
                         roles_with_limits[role] = {'min': min_qty, 'max': max_qty}
         
         if not order_limits_enabled:
-            st.info("📝 This simulation does not have Order Limit Feature enabled。")
+            st.info("📝 This simulation does not have order limit features enabled.")
             return
         
         # Statistics: Order Limit Application Status
@@ -3013,7 +3083,7 @@ class StreamlitBeerGameApp:
             for role, limits in roles_with_limits.items():
                 if role in round_data['agents']:
                     agent_data = round_data['agents'][role]
-                    order_quantity = agent_data.get('order_placed', 0)  # FixFieldName:Useorder_placedrather thanorder_quantity
+                    order_quantity = agent_data.get('order_placed', 0)  # Use order_placed field rather than order_quantity
                     
                     limit_violations[role]['total_orders'] += 1
                     
@@ -3033,20 +3103,20 @@ class StreamlitBeerGameApp:
                 compliance_rate = 1.0 - (total_violations / violations['total_orders']) if violations['total_orders'] > 0 else 1.0
                 
                 st.metric(
-                    f"{role_names[role]}Compliance Rate",
+                    f"{role_names[role]} Compliance Rate",
                     f"{compliance_rate:.1%}",
                     delta=f"Limit: {limits['min']}-{limits['max']}"
                 )
                 
                 if total_violations > 0:
-                    st.caption(f"Violation: {total_violations}times")
+                    st.caption(f"Violations: {total_violations}")
 
     def display_decision_statistics(self, result):
-        """DisplayFourParticipantsOrder DecisionStatisticsChart"""
+        """Display order decision statistics for all four participants"""
         st.markdown("### 📊 Participants Order Decision Statistics Analysis")
-        st.markdown("""This analysis displays four participants' order decision mode、Compliance Rate and Decision Probability Distribution，Helps understand decision behavior characteristics of each participant。""")
+        st.markdown("""This analysis displays order decision patterns, compliance rates, and decision probability distributions for each participant, helping understand decision behavior characteristics across the supply chain.""")
         
-        # ExtractOrder DecisionData
+        # Extract order decision data
         roles = {
             'retailer': '🏪 Retailer',
             'wholesaler': '🏢 Wholesaler', 
@@ -3072,12 +3142,12 @@ class StreamlitBeerGameApp:
                     demands.append(demand)
                     total_decisions += 1
                     
-                    # CheckwhetherViolationOrderLimit（AssumingMaxOrder QuantityforDemand3times）
-                    max_allowed = max(demand * 3, 100)  # Minallow100
+                    # Check for order limit violation (max allowed = demand * 3)
+                    max_allowed = max(demand * 3, 100)  # Min allowed: 100
                     if order > max_allowed:
                         violations += 1
             
-            # CalculateStatisticsMetric
+            # Calculate statistics metrics
             if orders:
                 decision_stats[role_key] = {
                     'name': role_name,
@@ -3134,14 +3204,14 @@ class StreamlitBeerGameApp:
                 order_bins = np.linspace(min(orders), max(orders), 20)
                 hist, bin_edges = np.histogram(orders, bins=order_bins)
                 bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-                probabilities = hist / sum(hist) * 100  # Convert topercentageRatio
+                probabilities = hist / sum(hist) * 100  # Convert to percentage
                 
                 # Add Probability Distribution Bar Chart
                 fig.add_trace(
                     go.Bar(
                         x=bin_centers,
                         y=probabilities,
-                        name=f'{stats["name"]}Probability',
+                        name=f'{stats["name"]} Probability',
                         marker_color=color,
                         opacity=0.7,
                         showlegend=False
@@ -3158,10 +3228,10 @@ class StreamlitBeerGameApp:
                     row=row, col=col
                 )
         
-        # UpdateLayout
+        # Update layout
         fig.update_layout(
             height=800,
-            title_text="FourParticipantsOrder DecisionProbability DistributionStatistics",
+            title_text="Order Decision Probability Distribution by Participant",
             showlegend=False
         )
         
@@ -3179,24 +3249,24 @@ class StreamlitBeerGameApp:
         for role_key, stats in decision_stats.items():
             stats_df.append({
                 'Participants': stats['name'],
-                'AverageOrder Quantity': f"{stats['avg_order']:.2f}",
-                'MaxOrder Quantity': stats['max_order'],
-                'MinOrder Quantity': stats['min_order'],
-                'OrderVariance': f"{stats['order_variance']:.2f}",
+                'Avg Order Qty': f"{stats['avg_order']:.2f}",
+                'Max Order Qty': stats['max_order'],
+                'Min Order Qty': stats['min_order'],
+                'Order Variance': f"{stats['order_variance']:.2f}",
                 'Compliance Rate': f"{stats['compliance_rate']:.1f}%",
-                'ViolationCount': stats['violations'],
-                'TotalDecisionCount': stats['total_decisions']
+                'Violation Count': stats['violations'],
+                'Total Decisions': stats['total_decisions']
             })
         
         import pandas as pd
         df = pd.DataFrame(stats_df)
         st.dataframe(df, width='stretch')
         
-        # DecisionRowforAnalysis
-        st.markdown("#### 🔍 Decision Row for Analysis")
+        # Decision data for analysis
+        st.markdown("#### 🔍 Decision Analysis Details")
         
         for role_key, stats in decision_stats.items():
-            with st.expander(f"📊 {stats['name']} DecisionAnalysis", expanded=False):
+            with st.expander(f"📊 {stats['name']} Decision Analysis", expanded=False):
                 col1, col2 = st.columns(2)
                 
                 with col1:
@@ -3226,11 +3296,11 @@ class StreamlitBeerGameApp:
                     if stats['avg_order'] < sum(stats['demands'])/len(stats['demands']) * 0.8:
                         st.write("• Order quantity is low, may lead to stockout risk")
         
-        # AddDecisionDetailsDisplayPanel
+        # Add decision details display panel
         st.markdown("#### 📋 Decision Details and Reason Explanations by Period")
         st.markdown("Displays each participant's specific order decisions and LLM reasoning explanation for each period.")
         
-        # CreateDecisionDetailsData
+        # Create decision details data
         decision_details = []
         for round_idx, round_data in enumerate(result.round_history):
             round_num = round_idx + 1
@@ -3257,12 +3327,12 @@ class StreamlitBeerGameApp:
                         'Decision Reason': decision_reason
                     })
         
-        # DisplayDecisionDetailsTable
+        # Display decision details table
         if decision_details:
             import pandas as pd
             details_df = pd.DataFrame(decision_details)
             
-            # AddFilterOption
+            # Add filter options
             col1, col2 = st.columns(2)
             with col1:
                 selected_participants = st.multiselect(
@@ -3282,14 +3352,14 @@ class StreamlitBeerGameApp:
                     key="decision_details_rounds"
                 )
             
-            # FilterData
+            # Filter data
             filtered_df = details_df[
                 (details_df['Participants'].isin(selected_participants)) &
                 (details_df['Period'] >= selected_rounds[0]) &
                 (details_df['Period'] <= selected_rounds[1])
             ]
             
-            # DisplayFilterafterData
+            # Display filtered data
             st.dataframe(
                 filtered_df,
                 width='stretch',
@@ -3304,11 +3374,11 @@ class StreamlitBeerGameApp:
                 }
             )
             
-            # AddExpandableDetailedViewChart
+            # Add expandable detailed view chart
             st.markdown("#### 🔍 Detailed Decision Analysis")
             for role_key, role_name in roles.items():
                 if role_name in selected_participants:
-                    with st.expander(f"📊 {role_name} DetailedDecisionHistory", expanded=False):
+                    with st.expander(f"📊 {role_name} Detailed Decision History", expanded=False):
                         role_decisions = filtered_df[filtered_df['Participants'] == role_name]
                         
                         if not role_decisions.empty:
@@ -3332,7 +3402,7 @@ class StreamlitBeerGameApp:
                         else:
                             st.info("No decision data for the selected participants in the given period range")
         else:
-            st.warning("Not foundDecisionDetailsData，PossibleisbecauseforSimulation ResultsinmissingDecision ReasonInfo。")
+            st.warning("No decision details found. The simulation results may be missing decision reason information.")
 
     def display_coordinator_analysis(self, result):
         """Coordinator analysis — disabled"""
@@ -3342,10 +3412,10 @@ class StreamlitBeerGameApp:
     def save_all_data(self, result, bullwhip_metrics, ui_config):
         """Save all simulation data to a ZIP file"""
         try:
-            # CreateTempDirectory
+            # Create temp directory
             temp_dir = tempfile.mkdtemp()
-            
-            # 1. SaveSimulation ResultsJSON
+
+            # 1. Save simulation results as JSON
             result_dict = {
                 'config': ui_config,
                 'round_history': result.round_history,
@@ -3355,11 +3425,11 @@ class StreamlitBeerGameApp:
             with open(os.path.join(temp_dir, 'simulation_result.json'), 'w', encoding='utf-8') as f:
                 json.dump(result_dict, f, indent=2, ensure_ascii=False, default=str)
             
-            # 2. SaveBullwhip EffectAnalysis
+            # 2. Save bullwhip effect analysis
             with open(os.path.join(temp_dir, 'bullwhip_analysis.json'), 'w', encoding='utf-8') as f:
                 json.dump(bullwhip_metrics, f, indent=2, ensure_ascii=False, default=str)
             
-            # 3. SaveEachRoleOperationsDataCSV
+            # 3. Save per-role operations data as CSV
             roles = {
                 'retailer': 'Retailer',
                 'wholesaler': 'Wholesaler', 
@@ -3372,12 +3442,12 @@ class StreamlitBeerGameApp:
                     {
                         "Round": round_data['round'],
                         "Received Demand": round_data['agents'][role_key].get('demand_received', 0),
-                        "DownSingleDecision": round_data['agents'][role_key].get('order_placed', 0),
-                        "Period StartInventory": self.format_inventory_display(round_data['agents'][role_key]['start_state'].get('inventory', 0)),
-                        "Period EndInventory": self.format_inventory_display(round_data['agents'][role_key]['end_state'].get('inventory', 0)),
-                        "StockoutQuantity": self.format_backorder_display(round_data['agents'][role_key]['end_state'].get('backorder', 0)),
+                        "Order Placed": round_data['agents'][role_key].get('order_placed', 0),
+                        "Period Start Inventory": self.format_inventory_display(round_data['agents'][role_key]['start_state'].get('inventory', 0)),
+                        "Period End Inventory": self.format_inventory_display(round_data['agents'][role_key]['end_state'].get('inventory', 0)),
+                        "Backorder Quantity": self.format_backorder_display(round_data['agents'][role_key]['end_state'].get('backorder', 0)),
                         "Holding Cost": round_data['agents'][role_key]['end_state'].get('holding_cost', 0),
-                        "Stockout Cost": round_data['agents'][role_key]['end_state'].get('shortage_cost', 0),
+                        "Backorder Cost": round_data['agents'][role_key]['end_state'].get('shortage_cost', 0),
                         "Total Cost": round_data['agents'][role_key].get('round_cost', 0)
                     }
                     for round_data in result.round_history
@@ -3386,23 +3456,23 @@ class StreamlitBeerGameApp:
                 role_data.to_csv(os.path.join(temp_dir, f'{role_name}_OperationsData.csv'), 
                                index=False, encoding='utf-8-sig')
             
-            # 4. SaveDemandData
+            # 4. Save demand data
             demand_data = pd.DataFrame([
                 {
                     "Round": int(round_data['round']),
                     "Market Demand": int(round_data.get('customer_demand', 0)),
-                    "RetailerReceived Demand": int(round_data['agents']['retailer'].get('demand_received', 0)) if 'retailer' in round_data['agents'] else 0,
-                    "WholesalerReceived Demand": int(round_data['agents']['wholesaler'].get('demand_received', 0)) if 'wholesaler' in round_data['agents'] else 0,
-                    "DistributorReceived Demand": int(round_data['agents']['distributor'].get('demand_received', 0)) if 'distributor' in round_data['agents'] else 0,
-                    "ManufacturerReceived Demand": int(round_data['agents']['manufacturer'].get('demand_received', 0)) if 'manufacturer' in round_data['agents'] else 0
+                    "Retailer Received Demand": int(round_data['agents']['retailer'].get('demand_received', 0)) if 'retailer' in round_data['agents'] else 0,
+                    "Wholesaler Received Demand": int(round_data['agents']['wholesaler'].get('demand_received', 0)) if 'wholesaler' in round_data['agents'] else 0,
+                    "Distributor Received Demand": int(round_data['agents']['distributor'].get('demand_received', 0)) if 'distributor' in round_data['agents'] else 0,
+                    "Manufacturer Received Demand": int(round_data['agents']['manufacturer'].get('demand_received', 0)) if 'manufacturer' in round_data['agents'] else 0
                 }
                 for round_data in result.round_history
             ])
             demand_data.to_csv(os.path.join(temp_dir, 'DemandData.csv'), 
                              index=False, encoding='utf-8-sig')
             
-            # 5. SaveChartData
-            # InventoryData
+            # 5. Save chart data
+            # Inventory data
             inventory_data = []
             for round_data in result.round_history:
                 for role_key, role_name in roles.items():
@@ -3417,7 +3487,7 @@ class StreamlitBeerGameApp:
                                               index=False, encoding='utf-8-sig')
             
             # 6. Coordinator Analysis — disabled
-            # 7. CreateZIPFile
+            # 7. Create ZIP file
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             zip_filename = f'BeerGame Simulation Data_{timestamp}.zip'
             zip_path = os.path.join(tempfile.gettempdir(), zip_filename)
@@ -3429,7 +3499,7 @@ class StreamlitBeerGameApp:
                         arcname = os.path.relpath(file_path, temp_dir)
                         zipf.write(file_path, arcname)
             
-            # CleanupTempDirectory
+            # Clean up temp directory
             shutil.rmtree(temp_dir)
             
             return zip_path, zip_filename
@@ -3440,13 +3510,14 @@ class StreamlitBeerGameApp:
     
     def run_app(self):
         """Run Streamlit app"""
+        self._inject_global_styles()
         st.title("🍺 LLM Beer Game Simulation System")
         st.markdown("---")
         
         # Render sidebar
         ui_config = self.render_sidebar()
         
-        # MainInterface — full-width controls + config preview
+        # Main interface: full-width controls + config preview
         st.markdown("---")
 
         # === Simulation Controls ===
@@ -3476,22 +3547,22 @@ class StreamlitBeerGameApp:
         card_col1, card_col2, card_col3, card_col4 = st.columns(4)
 
         demand_label = demand_pattern.replace(" Demand", "")
-        card_col1.markdown(f"""<div style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:16px 12px;border-radius:10px;text-align:center;">
-            <div style="font-size:12px;opacity:0.85;margin-bottom:4px;">📊 Demand Type</div>
-            <div style="font-size:18px;font-weight:bold;">{demand_label}</div></div>""", unsafe_allow_html=True)
+        card_col1.markdown(f"""<div class="metric-card" style="border-top:3px solid #1B3A5C;">
+            <div class="label">Demand Type</div>
+            <div class="value">{demand_label}</div></div>""", unsafe_allow_html=True)
 
-        card_col2.markdown(f"""<div style="background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff;padding:16px 12px;border-radius:10px;text-align:center;">
-            <div style="font-size:12px;opacity:0.85;margin-bottom:4px;">🔢 Rounds</div>
-            <div style="font-size:18px;font-weight:bold;">{ui_config['num_rounds']}</div></div>""", unsafe_allow_html=True)
+        card_col2.markdown(f"""<div class="metric-card" style="border-top:3px solid #0D9488;">
+            <div class="label">Rounds</div>
+            <div class="value">{ui_config['num_rounds']}</div></div>""", unsafe_allow_html=True)
 
-        card_col3.markdown(f"""<div style="background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff;padding:16px 12px;border-radius:10px;text-align:center;">
-            <div style="font-size:12px;opacity:0.85;margin-bottom:4px;">🎲 Random Seed</div>
-            <div style="font-size:18px;font-weight:bold;">{ui_config['random_seed']}</div></div>""", unsafe_allow_html=True)
+        card_col3.markdown(f"""<div class="metric-card" style="border-top:3px solid #6366F1;">
+            <div class="label">Random Seed</div>
+            <div class="value">{ui_config['random_seed']}</div></div>""", unsafe_allow_html=True)
 
         info_sharing = "Yes" if ui_config.get('enable_info_sharing', False) else "No"
-        card_col4.markdown(f"""<div style="background:linear-gradient(135deg,#4facfe,#00f2fe);color:#fff;padding:16px 12px;border-radius:10px;text-align:center;">
-            <div style="font-size:12px;opacity:0.85;margin-bottom:4px;">🔄 Info Sharing</div>
-            <div style="font-size:18px;font-weight:bold;">{info_sharing}</div></div>""", unsafe_allow_html=True)
+        card_col4.markdown(f"""<div class="metric-card" style="border-top:3px solid #3B82F6;">
+            <div class="label">Info Sharing</div>
+            <div class="value">{info_sharing}</div></div>""", unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -3563,7 +3634,7 @@ class StreamlitBeerGameApp:
         
         # Run Simulation
         if run_button:
-            # CreateReal-time3DDisplayContainer
+            # Create real-time 3D display container
             realtime_3d_container = None
             realtime_3d_viz = None
             
@@ -3583,7 +3654,7 @@ class StreamlitBeerGameApp:
             progress_container = None
             
             with st.spinner("Running simulation..."):
-                # CreateSimulationProgressDisplayContainer
+                # Create simulation progress display container
                 # st.markdown("---")
                 st.markdown("## 🎮 Simulation Progress")
                 progress_container = st.container()
@@ -3594,7 +3665,7 @@ class StreamlitBeerGameApp:
                 def realtime_callback(data):
                     if realtime_3d_viz and realtime_3d_container:
                         realtime_3d_viz.update_round_data(data)
-                        # NotneedneedReNewre-renderHTML，update_round_dataalreadyalreadyHandleDoneUpdate
+                        # No need to re-render HTML; update_round_data handles the update
                 
                 result, bullwhip_metrics, error = self.run_simulation(
                     game_config, 
@@ -3624,7 +3695,7 @@ class StreamlitBeerGameApp:
                     </script>
                     """, height=0)
         
-        # DisplayResult
+        # Display results
         if st.session_state.get('result'):
             st.markdown("---")
             
@@ -3657,7 +3728,7 @@ class StreamlitBeerGameApp:
             # Summary Metric
             self.display_summary_metrics(st.session_state.result, st.session_state.bullwhip_metrics)
             
-            # ChartDisplay
+            # Chart display
             tabs = ["🏢 3D Supply Chain", "📊 Inventory & Orders", "🚚 Shipment & Pipeline", "💰 Cost Analysis", "🔄 Bullwhip & Decision Stats"]
 
             # If debug features enabled, add debug tab
@@ -3770,240 +3841,239 @@ class StreamlitBeerGameApp:
                 with debug_tab:
                     self.display_prompt_debug_panel(st.session_state.result, ui_config)
             
-            # DetailedData
-            with st.expander("ViewDetailedData", expanded=False):
-                # DemandInfoDisplay
+            # Detailed data
+            with st.expander("View Detailed Data", expanded=False):
+                # Demand info display
                 st.markdown("### 📊 Full Period Demand Info")
                 demand_data = pd.DataFrame([
                     {
                         "Round": int(round_data['round']),
-                        "Market Demand": int(round_data.get('customer_demand', 0)),  # FixPositiveFieldName
-                        "RetailerReceived Demand": int(round_data['agents']['retailer'].get('demand_received', 0)) if 'retailer' in round_data['agents'] else 0,
-                        "WholesalerReceived Demand": int(round_data['agents']['wholesaler'].get('demand_received', 0)) if 'wholesaler' in round_data['agents'] else 0,
-                        "DistributorReceived Demand": int(round_data['agents']['distributor'].get('demand_received', 0)) if 'distributor' in round_data['agents'] else 0,
-                        "ManufacturerReceived Demand": int(round_data['agents']['manufacturer'].get('demand_received', 0)) if 'manufacturer' in round_data['agents'] else 0
+                        "Market Demand": int(round_data.get('customer_demand', 0)),  # Use positive field names
+                        "Retailer Received Demand": int(round_data['agents']['retailer'].get('demand_received', 0)) if 'retailer' in round_data['agents'] else 0,
+                        "Wholesaler Received Demand": int(round_data['agents']['wholesaler'].get('demand_received', 0)) if 'wholesaler' in round_data['agents'] else 0,
+                        "Distributor Received Demand": int(round_data['agents']['distributor'].get('demand_received', 0)) if 'distributor' in round_data['agents'] else 0,
+                        "Manufacturer Received Demand": int(round_data['agents']['manufacturer'].get('demand_received', 0)) if 'manufacturer' in round_data['agents'] else 0
                     }
                     for round_data in st.session_state.result.round_history
                 ])
-                # EnsureAllNumberValueColumnallisNumberValueType
-                numeric_columns = ["Round", "Market Demand", "RetailerReceived Demand", "WholesalerReceived Demand", "DistributorReceived Demand", "ManufacturerReceived Demand"]
+                # Ensure all numeric columns are numeric type
+                numeric_columns = ["Round", "Market Demand", "Retailer Received Demand", "Wholesaler Received Demand", "Distributor Received Demand", "Manufacturer Received Demand"]
                 for col in numeric_columns:
                     demand_data[col] = pd.to_numeric(demand_data[col], errors='coerce').fillna(0).astype(int)
                 
                 st.dataframe(demand_data, width='stretch')
                 
-                # EachRoleDetailedOperationsData
+                # Per-role detailed operations data
                 roles = {
                     'retailer': 'Retailer',
-                    'wholesaler': 'Wholesaler', 
+                    'wholesaler': 'Wholesaler',
                     'distributor': 'Distributor',
                     'manufacturer': 'Manufacturer'
                 }
-                
-                # AddPromptTab
+
+                # Add prompt tab
                 tab_names = [f"📦 {name}" for name in roles.values()] + ["💬 Prompt"]
                 tabs = st.tabs(tab_names)
-                
-                # RoleDataTab
+
+                # Role data tabs
                 for i, (role_key, role_name) in enumerate(roles.items()):
                     with tabs[i]:
-                        st.markdown(f"### {role_name}OperationsData")
-                        
-                        # BaseOperationsData
+                        st.markdown(f"### {role_name} Operations Data")
+
+                        # Base operations data
                         role_data = pd.DataFrame([
                             {
                                 "Round": round_data['round'],
                                 "Received Demand": round_data['agents'][role_key].get('demand_received', 0),
-                                "DownSingleDecision": round_data['agents'][role_key].get('order_placed', 0),
-                                "Period StartInventory": self.format_inventory_display(round_data['agents'][role_key]['start_state'].get('inventory', 0)),
-                                "Period EndInventory": self.format_inventory_display(round_data['agents'][role_key]['end_state'].get('inventory', 0)),
+                                "Order Placed": round_data['agents'][role_key].get('order_placed', 0),
+                                "Period Start Inventory": self.format_inventory_display(round_data['agents'][role_key]['start_state'].get('inventory', 0)),
+                                "Period End Inventory": self.format_inventory_display(round_data['agents'][role_key]['end_state'].get('inventory', 0)),
                                 ("Production In Progress Total" if role_key == 'manufacturer' else "In-Transit Inventory"): round_data['agents'][role_key]['end_state'].get('total_in_transit', 0),
-                                ("Next Period Completed Production Quantity" if role_key == 'manufacturer' else "Soon to Arrive"): round_data['agents'][role_key]['end_state'].get('incoming_shipment', 0),
-                                "StockoutQuantity": self.format_backorder_display(round_data['agents'][role_key]['end_state'].get('backorder', 0)),
+                                ("Next Period Completed Production" if role_key == 'manufacturer' else "Incoming Shipment"): round_data['agents'][role_key]['end_state'].get('incoming_shipment', 0),
+                                "Backorder Quantity": self.format_backorder_display(round_data['agents'][role_key]['end_state'].get('backorder', 0)),
                                 "Holding Cost": round_data['agents'][role_key]['end_state'].get('holding_cost', 0),
-                                "Stockout Cost": round_data['agents'][role_key]['end_state'].get('shortage_cost', 0),
+                                "Backorder Cost": round_data['agents'][role_key]['end_state'].get('shortage_cost', 0),
                                 "Total Cost": round_data['agents'][role_key].get('round_cost', 0)
                             }
                             for round_data in st.session_state.result.round_history
                             if role_key in round_data['agents']
                         ])
                         st.dataframe(role_data, width='stretch')
-                        
-                        # In-Transit Inventory Details
-                        st.markdown(f"#### {role_name}{'Production In Progress Details' if role_key == 'manufacturer' else 'In-Transit Inventory Details'}")
+
+                        # In-Transit / Production Pipeline Details
+                        st.markdown(f"#### {role_name} {'Production Pipeline Details' if role_key == 'manufacturer' else 'In-Transit Inventory Details'}")
                         pipeline_data = []
                         for round_data in st.session_state.result.round_history:
                             if role_key in round_data['agents']:
                                 pipeline = round_data['agents'][role_key]['end_state'].get('shipment_pipeline', [])
                                 if role_key == 'manufacturer':
-                                    # Complete display of manufacturer production pipeline: zero-padded to Production Lead Time length, shown per period (including 0)
                                     lt = getattr(st.session_state.result.config.simulation, 'manufacturer_lead_time', None)
                                     lt = lt if isinstance(lt, int) and lt > 0 else (len(pipeline) if pipeline else 0)
                                     full_len = max(lt, len(pipeline))
                                     full_pipeline = [pipeline[i] if i < len(pipeline) else 0 for i in range(full_len)]
-                                    pipeline_str = ', '.join([f"No.{i+1}Period EstimatedCompleted:{qty}" for i, qty in enumerate(full_pipeline)])
+                                    pipeline_str = ', '.join([f"Period {i+1} Est. Complete: {qty}" for i, qty in enumerate(full_pipeline)])
                                     total_pipeline_sum = sum(full_pipeline)
                                 else:
-                                    pipeline_str = ', '.join([f"No.{i+1}Period EstimatedtoArrival:{qty}" for i, qty in enumerate(pipeline) if qty > 0])
+                                    pipeline_str = ', '.join([f"Period {i+1} Est. Arrival: {qty}" for i, qty in enumerate(pipeline) if qty > 0])
                                     total_pipeline_sum = sum(pipeline)
                                 if not pipeline_str:
-                                    pipeline_str = "NoneinProductionProduction" if role_key == 'manufacturer' else "NoneIn-Transit Inventory"
+                                    pipeline_str = "No Production In Progress" if role_key == 'manufacturer' else "No In-Transit Inventory"
                                 pipeline_data.append({
                                     "Round": round_data['round'],
-                                    ("Production In Progress Details" if role_key == 'manufacturer' else "In-Transit Inventory Details"): pipeline_str,
-                                    ("Total In Production Quantity" if role_key == 'manufacturer' else "Total In Transit Quantity"): total_pipeline_sum
+                                    ("Production Pipeline Details" if role_key == 'manufacturer' else "In-Transit Inventory Details"): pipeline_str,
+                                    ("Total In Production" if role_key == 'manufacturer' else "Total In Transit"): total_pipeline_sum
                                 })
-                        
+
                         if pipeline_data:
                             pipeline_df = pd.DataFrame(pipeline_data)
                             st.dataframe(pipeline_df, width='stretch')
-                        
-                        # OrderFlowInfo
-                        st.markdown(f"#### {role_name}OrderFlowInfo")
+
+                        # Order flow info
+                        st.markdown(f"#### {role_name} Order Flow Info")
                         order_flow_data = []
                         for round_data in st.session_state.result.round_history:
-                            # FindSent toCurrentRoleOrder
+                            # Find orders sent to current role
                             received_orders = []
                             for order_flow in round_data.get('orders_flow', []):
                                 if order_flow.get('to') == role_key:
-                                    received_orders.append(f"From {order_flow.get('from', 'Unknown')}:{order_flow.get('quantity', 0)}")
-                            
-                            # FindCurrentRoleIssued Order
+                                    received_orders.append(f"From {order_flow.get('from', 'Unknown')}: {order_flow.get('quantity', 0)}")
+
+                            # Find orders issued by current role
                             sent_orders = []
                             for order_flow in round_data.get('orders_flow', []):
                                 if order_flow.get('from') == role_key:
                                     sent_orders.append(f"Sent to {order_flow.get('to', 'Unknown')}: {order_flow.get('quantity', 0)}")
-                            
+
                             order_flow_data.append({
                                 "Round": round_data['round'],
                                 "Received Order": ', '.join(received_orders) if received_orders else "None",
                                 "Issued Order": ', '.join(sent_orders) if sent_orders else "None"
                             })
-                        
+
                         if order_flow_data:
                             order_flow_df = pd.DataFrame(order_flow_data)
                             st.dataframe(order_flow_df, width='stretch')
-                        
-                        # DataDownloadFeature
+
+                        # Data download feature
                         csv = role_data.to_csv(index=False, encoding='utf-8-sig')
                         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                         st.download_button(
-                            label=f"📥 Download{role_name}Data",
+                            label=f"📥 Download {role_name} Data",
                             data=csv,
                             file_name=f"{role_name}_OperationsData_{timestamp}.csv",
                             mime="text/csv"
                         )
                 
-                # PromptTab
+                # Prompt tab
                 with tabs[len(roles)]:
                     st.markdown("### 💬 Per Round Prompt Details")
                     st.markdown("View each participant's complete prompt content for each round")
-                    
-                    # Round Selector
+
+                    # Round selector
                     available_rounds = [rd['round'] for rd in st.session_state.result.round_history if 'prompts' in rd]
                     if available_rounds:
                         selected_round = st.selectbox(
                             "Select Round",
                             available_rounds,
-                            format_func=lambda x: f"Round{x} Round"
+                            format_func=lambda x: f"Round {x}"
                         )
-                        
-                        # FindtoSelectinRoundData
+
+                        # Find selected round data
                         selected_round_data = None
                         for rd in st.session_state.result.round_history:
                             if rd['round'] == selected_round and 'prompts' in rd:
                                 selected_round_data = rd
                                 break
-                        
+
                         if selected_round_data and 'prompts' in selected_round_data:
-                            st.markdown(f"#### Round{selected_round} RoundPrompt")
-                            
-                            # RoleSelectSelector
+                            st.markdown(f"#### Round {selected_round} Prompt")
+
+                            # Role selector
                             available_roles = list(selected_round_data['prompts'].keys())
                             role_names_map = {
                                 'retailer': 'Retailer',
-                                'wholesaler': 'Wholesaler', 
+                                'wholesaler': 'Wholesaler',
                                 'distributor': 'Distributor',
                                 'manufacturer': 'Manufacturer'
                             }
-                            
+
                             selected_role = st.selectbox(
                                 "Select Participants",
                                 available_roles,
                                 format_func=lambda x: role_names_map.get(x, x)
                             )
-                            
+
                             if selected_role in selected_round_data['prompts']:
                                 prompt_data = selected_round_data['prompts'][selected_role]
-                                
-                                # DisplayPromptContent
+
+                                # Display prompt content
                                 col1, col2 = st.columns(2)
-                                
+
                                 with col1:
-                                    st.markdown("##### 🤖 SystemPrompt")
+                                    st.markdown("##### 🤖 System Prompt")
                                     st.text_area(
-                                        "SystemPromptContent",
+                                        "System Prompt",
                                         value=prompt_data.get('system_prompt', ''),
                                         height=300,
                                         key=f"system_prompt_{selected_round}_{selected_role}",
                                         label_visibility="collapsed"
                                     )
-                                
+
                                 with col2:
-                                    st.markdown("##### 👤 UserPrompt")
+                                    st.markdown("##### 👤 User Prompt")
                                     st.text_area(
-                                        "UserPromptContent",
+                                        "User Prompt",
                                         value=prompt_data.get('user_prompt', ''),
                                         height=300,
                                         key=f"user_prompt_{selected_round}_{selected_role}",
                                         label_visibility="collapsed"
                                     )
-                                
-                                # CompletePromptDisplay
-                                with st.expander("ViewCompletePrompt", expanded=False):
+
+                                # Complete prompt display
+                                with st.expander("View Complete Prompt", expanded=False):
                                     st.text_area(
-                                        "CompletePrompt",
+                                        "Complete Prompt",
                                         value=prompt_data.get('full_prompt', ''),
                                         height=400,
                                         key=f"full_prompt_{selected_round}_{selected_role}",
                                         label_visibility="collapsed"
                                     )
-                                
-                                # DisplayDecision Explanation
+
+                                # Display decision explanation
                                 st.markdown("##### 🎯 Decision Explanation")
                                 decision_explanation = ""
                                 if selected_role in selected_round_data['agents']:
                                     decision_explanation = selected_round_data['agents'][selected_role].get('decision_explanation', 'No decision explanation provided')
-                                
+
                                 if decision_explanation:
                                     st.info(f"**Decision Explanation:** {decision_explanation}")
                                 else:
-                                    st.warning("No decision explanation info received for this round")
-                                
-                                # Download Prompt and Decision Explanation
-                                prompt_text = f"""Round{selected_round} Round - {role_names_map.get(selected_role, selected_role)} PromptandDecision Explanation
+                                    st.warning("No decision explanation received for this round")
 
-SystemPrompt:
+                                # Download prompt and decision explanation
+                                prompt_text = f"""Round {selected_round} - {role_names_map.get(selected_role, selected_role)} Prompt and Decision Explanation
+
+System Prompt:
 {prompt_data.get('system_prompt', '')}
 
-UserPrompt:
+User Prompt:
 {prompt_data.get('user_prompt', '')}
 
-CompletePrompt:
+Complete Prompt:
 {prompt_data.get('full_prompt', '')}
 
 Decision Explanation:
 {decision_explanation}"""
-                                
+
                                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                                 st.download_button(
-                                    label=f"📥 Download Prompt and Decision Explanation",
+                                    label="📥 Download Prompt and Decision Explanation",
                                     data=prompt_text,
-                                    file_name=f"PromptDecision Explanation_No.{selected_round}Round_{role_names_map.get(selected_role, selected_role)}_{timestamp}.txt",
+                                    file_name=f"Prompt_Decision_Explanation_Round_{selected_round}_{role_names_map.get(selected_role, selected_role)}_{timestamp}.txt",
                                     mime="text/plain"
                                 )
                         else:
-                            st.warning(f"Round{selected_round} RoundNoPromptData")
+                            st.warning(f"Round {selected_round} has no prompt data")
                     else:
                         st.info("Current simulation results have no prompt data. Please re-run the simulation to collect prompt info.")
     
@@ -4012,74 +4082,74 @@ Decision Explanation:
         st.title("📊 Load History Simulation Results")
         st.markdown("---")
         
-        # ReturnButton
+        # Return button
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
             if st.button("⬅️ Return to Main Interface", type="secondary"):
                 st.session_state.show_example = False
                 st.rerun()
         
-        # ScanHistoryFile
+        # Scan history files
         history_files = self.scan_history_files()
         
         if not history_files:
             st.warning("📁 No history simulation result files found")
             st.markdown("""
-            **PossibleReason:**
-            - Have notNoRunyetSimulation
-            - Simulation ResultsFilewas movedorDelete
-            - FileSaveinOtherDirectory
-            
+            **Possible reasons:**
+            - No simulation has been run yet
+            - Simulation result files were moved or deleted
+            - Files saved in a different directory
+
             **Suggestions:**
-            1. FirstRunAtimesSimulationGenerateResultFile
-            2. CheckProject rootDirectoryDown `simulation_outputs` Filefolder
+            1. Run a simulation first to generate result files
+            2. Check the `simulation_outputs` folder under the project root directory
             """)
             return
         
-        st.success(f"🎉 Findto {len(history_files)} History Simulation ResultsFile")
+        st.success(f"🎉 Found {len(history_files)} historical simulation result files")
         
-        # FileSelect
-        st.markdown("### 📋 Select to loadSimulation Results")
+        # File selection
+        st.markdown("### 📋 Select Simulation Results to Load")
         
-        # CreateFileSelectOption
+        # Create file selection options
         file_options = []
         for file_info in history_files:
             display_name = f"{file_info['display_name']} ({file_info['file_size']})"
             file_options.append(display_name)
         
         selected_index = st.selectbox(
-            "SelectFile:",
+            "Select File:",
             range(len(file_options)),
             format_func=lambda x: file_options[x],
-            help="Select to loadHistory Simulation ResultsFile"
+            help="Select a historical simulation result file to load"
         )
         
         if selected_index is not None:
             selected_file = history_files[selected_index]
             
-            # DisplayFileDetails
-            st.markdown("### 📄 FileDetails")
+            # Display file details
+            st.markdown("### 📄 File Details")
             col1, col2, col3 = st.columns(3)
-            
+
             with col1:
-                st.metric("FileName", selected_file['filename'])
+                st.metric("File Name", selected_file['filename'])
             with col2:
-                st.metric("CreateWhenTime", selected_file['created_time'])
+                st.metric("Created Time", selected_file['created_time'])
             with col3:
-                st.metric("FileSize", selected_file['file_size'])
+                st.metric("File Size", selected_file['file_size'])
             
-            # LoadButton
+            # Load button
             if st.button("🚀 Load this Simulation Result", type="primary", width='stretch'):
-                with st.spinner("PositiveinLoadSimulation Results..."):
+                with st.spinner("Loading simulation results..."):
                     success = self.load_simulation_result(selected_file['filepath'])
-                    
+
                     if success:
-                        st.success("✅ Simulation result loaded successfully！")
+                        st.success("✅ Simulation result loaded successfully!")
                         st.session_state.show_example = False
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("❌ Simulation result load failed，PleaseCheckFileformat")
+                        st.error("❌ Failed to load simulation result. Please check the file format.")
     
     def scan_history_files(self):
         """Scan history simulation results files"""
@@ -4088,10 +4158,10 @@ Decision Explanation:
         from datetime import datetime
         from pathlib import Path
         
-        # ScanMultiPossibleDirectory
+        # Scan multiple possible directories
         search_dirs = [
             "simulation_outputs",
-            ".",  # CurrentDirectory
+            ".",  # Current directory
             "demo_comparison",
             "outputs"
         ]
@@ -4105,18 +4175,18 @@ Decision Explanation:
                         filepath = os.path.join(search_dir, filename)
                         
                         try:
-                            # GetFileInfo
+                            # Get file info
                             file_stat = os.stat(filepath)
                             file_size = f"{file_stat.st_size / 1024:.1f} KB"
                             created_time = datetime.fromtimestamp(file_stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
                             
-                            # TryReadFileContentGetMoreInfo
+                            # Try to read file content for more info
                             display_name = filename
                             try:
                                 with open(filepath, 'r', encoding='utf-8') as f:
                                     data = json.load(f)
                                     
-                                # TryfromFileContentinExtractfriendlierDisplayName
+                                # Try to extract a friendlier display name from file content
                                 if 'metadata' in data and 'scenario_name' in data['metadata']:
                                     scenario_name = data['metadata']['scenario_name']
                                     display_name = f"{scenario_name} - {filename}"
@@ -4125,7 +4195,7 @@ Decision Explanation:
                                     display_name = f"{pattern}Demand - {filename}"
                                     
                             except:
-                                pass  # IfNoneMethodParse，Use original filename
+                                pass  # If unable to parse, use original filename
                             
                             history_files.append({
                                 'filename': filename,
@@ -4153,37 +4223,37 @@ Decision Explanation:
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            # Based onFileformatReconstructSimulationResultObject
+            # Reconstruct simulation result object based on file format
             if 'round_history' in data:
-                # StandardformatSimulation ResultsFile
+                # Standard format simulation results file
                 result = self.reconstruct_simulation_result(data)
                 bullwhip_metrics = data.get('bullwhip_metrics', {})
-                
+
             elif 'results' in data and 'bullwhip_metrics' in data:
-                # demo formatSimulation ResultsFile
+                # Demo format simulation results file
                 result = self.reconstruct_from_demo_format(data)
                 bullwhip_metrics = data['bullwhip_metrics']
-                
+
             elif 'run' in data and 'timestamp' in data and len(data) <= 3:
-                # SimplifiedformatFile，OnlyhasbasicThisInfo
-                st.warning("⚠️ This is a simplified simulation record file，Does not contain complete simulation data")
-                st.info("""**FileInfo:**
-                - RunRun #:{}
-                - WhenTimestamp:{}
-                
+                # Simplified format file with only basic info
+                st.warning("⚠️ This is a simplified simulation record file and does not contain complete simulation data.")
+                st.info("""**File Info:**
+                - Run #: {}
+                - Timestamp: {}
+
                 **Suggestions:**
-                - SelectContains complete simulation dataFile
-                - FindFileNameContainsMoreInfoResultFile""".format(data.get('run', 'N/A'), data.get('timestamp', 'N/A')))
+                - Select a file containing complete simulation data
+                - Look for filenames with more detailed result info""".format(data.get('run', 'N/A'), data.get('timestamp', 'N/A')))
                 return False
-                
+
             else:
                 st.error("❌ Unsupported file format")
-                st.info("""**SupportFileformat:**
-                - Contains `round_history` Standard simulation results file
-                - Contains `results` and `bullwhip_metrics` demo formatFile
-                
-                **CurrentFileContainsField:**
-                {}""".format(', '.join(data.keys()) if isinstance(data, dict) else 'NoneMethodParse'))
+                st.info("""**Supported file formats:**
+                - Standard simulation results file containing `round_history`
+                - Demo format file containing `results` and `bullwhip_metrics`
+
+                **Current file contains fields:**
+                {}""".format(', '.join(data.keys()) if isinstance(data, dict) else 'Unable to parse'))
                 return False
             
             # Savetosession state
@@ -4198,7 +4268,7 @@ Decision Explanation:
     
     def reconstruct_simulation_result(self, data):
         """Reconstruct simulation result object from standard format"""
-        # Create simulated SimulationResult object, not dependent on original class
+        # Create simulated SimulationResult object without depending on the original class
         class MockSimulationResult:
             def __init__(self, data):
                 self.round_history = data.get('round_history', [])
@@ -4208,7 +4278,7 @@ Decision Explanation:
                 self.bullwhip_metrics = data.get('bullwhip_metrics', {})
                 self.simulation_time = data.get('simulation_time', 0)
                 self.config = data.get('config', {})
-                # IfNoagent_states，fromround_historyinReconstruct
+                # If no agent_states, reconstruct from round_history
                 if not self.agent_states and self.round_history:
                     last_round = self.round_history[-1] if self.round_history else {}
                     self.agent_states = {
@@ -4224,7 +4294,7 @@ Decision Explanation:
     
     def reconstruct_from_demo_format(self, data):
         """Reconstruct simulation result object from demo format"""
-        # CreateSimulateSimulation Results
+        # Create simulated results
         class MockSimulationResult:
             def __init__(self, data):
                 results = data['results']
@@ -4234,7 +4304,7 @@ Decision Explanation:
                 self.total_rounds = results.get('rounds', 20)
                 self.agent_costs = results.get('agents', {})
                 self.simulation_time = 0
-                # CreateSimulateround_history
+                # Create simulated round_history
                 self.round_history = []
                 for i in range(self.total_rounds):
                     round_data = {
@@ -4243,11 +4313,11 @@ Decision Explanation:
                         'wholesaler': {'inventory': 10, 'backorder': 0, 'cost': self.agent_costs.get('wholesaler', {}).get('cost', 0) / self.total_rounds},
                         'distributor': {'inventory': 10, 'backorder': 0, 'cost': self.agent_costs.get('distributor', {}).get('cost', 0) / self.total_rounds},
                         'manufacturer': {'inventory': 10, 'backorder': 0, 'cost': self.agent_costs.get('manufacturer', {}).get('cost', 0) / self.total_rounds},
-                        'market_demand': 10 + (i % 5)  # SimulateDemandChange
+                        'market_demand': 10 + (i % 5)  # Simulate demand variation
                     }
                     self.round_history.append(round_data)
-                
-                # Createagent_states
+
+                # Create agent_states
                 self.agent_states = {
                     'retailer': {'inventory': 10, 'backorder': 0, 'cost': self.agent_costs.get('retailer', {}).get('cost', 0)},
                     'wholesaler': {'inventory': 10, 'backorder': 0, 'cost': self.agent_costs.get('wholesaler', {}).get('cost', 0)},
@@ -4255,11 +4325,11 @@ Decision Explanation:
                     'manufacturer': {'inventory': 10, 'backorder': 0, 'cost': self.agent_costs.get('manufacturer', {}).get('cost', 0)}
                 }
                 
-                # CreateSimulateconfig
+                # Create simulated config
                 self.config = {
-                    'scenario_name': metadata.get('scenario_name', 'HistorySimulation'),
+                    'scenario_name': metadata.get('scenario_name', 'Historical Simulation'),
                     'strategy': metadata.get('strategy', 'unknown'),
-                    'demand_pattern': 'HistoryData',
+                    'demand_pattern': 'Historical Data',
                     'total_weeks': self.total_rounds
                 }
         
@@ -4271,22 +4341,22 @@ Decision Explanation:
         st.markdown("This panel allows you to view and edit prompts used by each role in each round, to adjust and optimize decision logic.")
         
         if not hasattr(result, 'round_history') or not result.round_history:
-            st.info("ℹ️ PleaseFirstRun SimulationtoGeneratePromptData")
+            st.info("ℹ️ Please run a simulation first to generate prompt data.")
             st.markdown("""
-            **UseDescription:**
-            1. Configure Simulation Parameters in the left sidebar
-            2. EnsureCheckDone"Enable Prompt Debugging"
-            3. PointClick"🚀 StartSimulation"Run Simulation
-            4. After simulation completes, view prompt details of each round here
-            
-            **FeatureFeaness:**
-            - 📊 **Round Selector**:ViewanyCompletedRoundPrompt
-            - 👥 **RoleSelectSelector**:ViewFourSupply Chain RolePrompt
-            - 📝 **PromptDisplay**:ViewSystemPromptandUserPrompt
-            - 🤖 **LLM Response**:ViewModelCompleteResponse
-            - 💭 **Decision Explanation**:ViewDecision ReasoningProcess
-            - ✏️ **Edit Feature**:Allow Prompt Editing（needEnableEditMode）
-            - 📤 **ExportFeature**:ExportPromptDataForAnalysis
+            **Usage Instructions:**
+            1. Configure simulation parameters in the left sidebar
+            2. Ensure "Enable Prompt Debugging" is checked
+            3. Click "🚀 Start Simulation" to run the simulation
+            4. After simulation completes, view prompt details for each round here
+
+            **Features:**
+            - 📊 **Round Selector**: View prompts for any completed round
+            - 👥 **Role Selector**: View prompts for all four supply chain roles
+            - 📝 **Prompt Display**: View system prompt and user prompt
+            - 🤖 **LLM Response**: View complete model response
+            - 💭 **Decision Explanation**: View decision reasoning process
+            - ✏️ **Edit Feature**: Allow prompt editing (requires edit mode enabled)
+            - 📤 **Export Feature**: Export prompt data for analysis
             """)
             return
         
@@ -4296,7 +4366,7 @@ Decision Explanation:
             selected_round = st.selectbox(
                 "Select Round",
                 range(1, len(result.round_history) + 1),
-                format_func=lambda x: f"Round{x} Round",
+                format_func=lambda x: f"Round {x}",
                 key="debug_round_selector"
             )
         
@@ -4309,21 +4379,21 @@ Decision Explanation:
                 key="debug_role_selector"
             )
         
-        # GetSelectinRoundData
+        # Get selected round data
         round_data = result.round_history[selected_round - 1]
         role_name_map = {"retailer": "Retailer", "wholesaler": "Wholesaler", 
                         "distributor": "Distributor", "manufacturer": "Manufacturer"}
         
-        st.markdown(f"#### {role_name_map[selected_role]} - No.{selected_round}Round")
+        st.markdown(f"#### {role_name_map[selected_role]} - Round {selected_round}")
         
-        # CheckWhether there isPromptData
+        # Check whether prompt data exists
         if selected_role not in round_data.get('agents', {}):
-            st.warning(f"⚠️ No.{selected_round}RoundNo{role_name_map[selected_role]}Data")
+            st.warning(f"⚠️ Round {selected_round} has no data for {role_name_map[selected_role]}")
             return
         
         agent_data = round_data['agents'][selected_role]
         
-        # DisplayDecisionInfo
+        # Display decision info
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Order Decision", agent_data.get('order_placed', 'N/A'))
@@ -4332,10 +4402,10 @@ Decision Explanation:
         with col3:
             st.metric("Received Demand", agent_data.get('demand_received', 'N/A'))
         
-        # PromptDisplayandEdit
-        st.markdown("##### 📝 PromptContent")
+        # Prompt display and edit
+        st.markdown("##### 📝 Prompt Content")
         
-        # CheckWhether there isPromptData
+        # Check whether prompt data exists
         prompt_data = {}
         if 'prompts' in round_data and selected_role in round_data['prompts']:
             prompt_data = round_data['prompts'][selected_role]
@@ -4343,11 +4413,11 @@ Decision Explanation:
             prompt_data = agent_data['prompt_info']
         
         if not prompt_data:
-            st.info("ℹ️ No prompt info recorded for this round（PossibleisRule-BasedorDataNotSave）")
+            st.info("ℹ️ No prompt info recorded for this round (possibly rule-based or data not saved)")
             return
         
-        # SystemPrompt
-        with st.expander("🤖 SystemPrompt", expanded=True):
+        # System prompt
+        with st.expander("🤖 System Prompt", expanded=True):
             system_prompt = prompt_data.get('system_prompt', 'No system prompt recorded')
             if ui_config.get('debug_allow_edit', False):
                 edited_system = st.text_area(
@@ -4357,12 +4427,12 @@ Decision Explanation:
                     key=f"edit_system_prompt_{selected_round}_{selected_role}"
                 )
                 if st.button(f"💾 Save System Prompt Changes", key=f"save_system_{selected_round}_{selected_role}"):
-                    st.success("✅ System prompt changes saved（Note:ThisjustInterfaceDisplay，Notwill affectCompletedSimulation）")
+                    st.success("✅ System prompt changes saved (note: this is display only and will not affect the completed simulation)")
             else:
                 st.code(system_prompt, language="text")
         
-        # UserPrompt
-        with st.expander("👤 UserPrompt", expanded=True):
+        # User prompt
+        with st.expander("👤 User Prompt", expanded=True):
             user_prompt = prompt_data.get('user_prompt', 'No user prompt recorded')
             if ui_config.get('debug_allow_edit', False):
                 edited_user = st.text_area(
@@ -4372,7 +4442,7 @@ Decision Explanation:
                     key=f"edit_user_prompt_{selected_round}_{selected_role}"
                 )
                 if st.button(f"💾 Save User Prompt Changes", key=f"save_user_{selected_round}_{selected_role}"):
-                    st.success("✅ User prompt changes saved（Note:ThisjustInterfaceDisplay，Notwill affectCompletedSimulation）")
+                    st.success("✅ User prompt changes saved (note: this is display only and will not affect the completed simulation)")
             else:
                 st.code(user_prompt, language="text")
         
@@ -4386,7 +4456,7 @@ Decision Explanation:
             decision_explanation = agent_data.get('decision_explanation', prompt_data.get('decision_explanation', 'No decision explanation recorded'))
             st.markdown(decision_explanation)
         
-        # Real-timeDebug Features
+        # Real-time debug features
         if ui_config.get('debug_realtime', False):
             st.markdown("---")
             st.markdown("##### ⚡ Real-time Debug Features")
@@ -4396,7 +4466,7 @@ Decision Explanation:
             if st.button("🔄 Refresh Current Data", key=f"refresh_{selected_round}_{selected_role}"):
                 st.rerun()
         
-        # ExportFeature
+        # Export feature
         st.markdown("---")
         col1, col2 = st.columns(2)
         with col1:
@@ -4438,7 +4508,7 @@ Decision Explanation:
                     import json
                     json_str = json.dumps(all_prompts, ensure_ascii=False, indent=2)
                     st.download_button(
-                        label="💾 DownloadCompleteJSONFile",
+                        label="💾 Download Complete JSON File",
                         data=json_str,
                         file_name=f"all_prompts_{role_name_map[selected_role]}.json",
                         mime="application/json"
@@ -4451,16 +4521,16 @@ Decision Explanation:
         validation_results = []
         
         if demand_type == "Autoregressive":
-            # CheckAutocorrelation
+            # Check autocorrelation
             if len(preview_demands) > 10:
                 autocorr = np.corrcoef(preview_demands[:-1], preview_demands[1:])[0, 1]
                 if not np.isnan(autocorr):
                     if autocorr > 0.7:
-                        validation_results.append(("⚠️", "Autocorrelation", f"Autocorrelation Coefficient {autocorr:.3f} Too High，May lead toOver-smoothing"))
+                        validation_results.append(("⚠️", "Autocorrelation", f"Autocorrelation coefficient {autocorr:.3f} is too high, may lead to over-smoothing"))
                     elif autocorr < 0.1:
-                        validation_results.append(("ℹ️", "Autocorrelation", f"Autocorrelation Coefficient {autocorr:.3f} Low，Time dependency is not obvious"))
+                        validation_results.append(("ℹ️", "Autocorrelation", f"Autocorrelation coefficient {autocorr:.3f} is low, time dependency is not obvious"))
                     else:
-                        validation_results.append(("✅", "Autocorrelation", f"Autocorrelation Coefficient {autocorr:.3f} Moderate"))
+                        validation_results.append(("✅", "Autocorrelation", f"Autocorrelation coefficient {autocorr:.3f} is moderate"))
         
         elif demand_type == "ARMA Demand":
             # Check ARMA model stability
@@ -4471,12 +4541,12 @@ Decision Explanation:
                 var_ratio = max(first_half_var, second_half_var) / min(first_half_var, second_half_var)
                 
                 if var_ratio > 3.0:
-                    validation_results.append(("⚠️", "Variance Stability", f"Before/After Halves Variance Ratio {var_ratio:.2f} Too large，Model is volatile"))
+                    validation_results.append(("⚠️", "Variance Stability", f"Before/after halves variance ratio {var_ratio:.2f} is too large, model is volatile"))
                 else:
-                    validation_results.append(("✅", "Variance Stability", f"Before/After Halves Variance Ratio {var_ratio:.2f} Stable"))
+                    validation_results.append(("✅", "Variance Stability", f"Before/after halves variance ratio {var_ratio:.2f} is stable"))
         
         elif demand_type == "Jump Diffusion":
-            # CheckJump Frequencyandmagnitude
+            # Check jump frequency and magnitude
             if len(preview_demands) > 5:
                 diffs = np.diff(preview_demands)
                 large_jumps = np.abs(diffs) > 2 * np.std(diffs)
@@ -4484,11 +4554,11 @@ Decision Explanation:
                 jump_rate = jump_count / len(diffs)
                 
                 if jump_rate > 0.3:
-                    validation_results.append(("⚠️", "Jump Frequency", f"Jump Frequency {jump_rate:.2%} Too High，Demand is too volatile"))
+                    validation_results.append(("⚠️", "Jump Frequency", f"Jump frequency {jump_rate:.2%} is too high, demand is too volatile"))
                 elif jump_rate < 0.05:
-                    validation_results.append(("ℹ️", "Jump Frequency", f"Jump Frequency {jump_rate:.2%} Low，Jump effect is not obvious"))
+                    validation_results.append(("ℹ️", "Jump Frequency", f"Jump frequency {jump_rate:.2%} is low, jump effect is not obvious"))
                 else:
-                    validation_results.append(("✅", "Jump Frequency", f"Jump Frequency {jump_rate:.2%} Moderate"))
+                    validation_results.append(("✅", "Jump Frequency", f"Jump frequency {jump_rate:.2%} is moderate"))
         
         elif demand_type == "Poisson Jump":
             # Check jump discreteness
@@ -4498,12 +4568,12 @@ Decision Explanation:
                 diversity_ratio = unique_values / total_values
                 
                 if diversity_ratio < 0.3:
-                    validation_results.append(("ℹ️", "Value Diversity", f"Unique Value Ratio {diversity_ratio:.2%}，Demand values are relatively concentrated"))
+                    validation_results.append(("ℹ️", "Value Diversity", f"Unique value ratio {diversity_ratio:.2%}, demand values are relatively concentrated"))
                 else:
-                    validation_results.append(("✅", "Value Diversity", f"Unique Value Ratio {diversity_ratio:.2%}，Demand value distribution is reasonable"))
+                    validation_results.append(("✅", "Value Diversity", f"Unique value ratio {diversity_ratio:.2%}, demand value distribution is reasonable"))
         
         elif demand_type == "Regime Switching":
-            # CheckRegime ConversionObviousness
+            # Check regime conversion detectability
             if len(preview_demands) > 20:
                 # Simple single regime detection: find significant mean change
                 mid_point = len(preview_demands) // 2
@@ -4512,9 +4582,9 @@ Decision Explanation:
                 mean_diff = abs(second_half_mean - first_half_mean)
                 
                 if mean_diff > 3:
-                    validation_results.append(("✅", "Regime Conversion", f"DetecttoObviousRegime Conversion，MeanDifference {mean_diff:.2f}"))
+                    validation_results.append(("✅", "Regime Switch", f"Detected obvious regime switch, mean difference {mean_diff:.2f}"))
                 else:
-                    validation_results.append(("ℹ️", "Regime Conversion", f"Regime ConversionNotObvious，MeanDifference {mean_diff:.2f}"))
+                    validation_results.append(("ℹ️", "Regime Switch", f"Regime switch is not obvious, mean difference {mean_diff:.2f}"))
         
         elif demand_type == "Volatility Clustering":
             # Check volatility clustering effect
@@ -4527,12 +4597,12 @@ Decision Explanation:
                     rolling_stds.append(rolling_std)
                 
                 if len(rolling_stds) > 5:
-                    # CheckVolatility Rate Fluctuation
+                    # Check volatility fluctuation
                     volatility_of_volatility = np.std(rolling_stds)
                     if volatility_of_volatility > 1.0:
-                        validation_results.append(("✅", "Volatility Rate Clustering", f"Detected volatility clustering effect，Volatility Rate Fluctuation {volatility_of_volatility:.2f}"))
+                        validation_results.append(("✅", "Volatility Clustering", f"Detected volatility clustering effect, volatility fluctuation {volatility_of_volatility:.2f}"))
                     else:
-                        validation_results.append(("ℹ️", "Volatility Rate Clustering", f"Volatility clustering effect not evident，Volatility Rate Fluctuation {volatility_of_volatility:.2f}"))
+                        validation_results.append(("ℹ️", "Volatility Clustering", f"Volatility clustering effect not evident, volatility fluctuation {volatility_of_volatility:.2f}"))
         
         return validation_results
     
@@ -4542,21 +4612,21 @@ Decision Explanation:
             st.info("💡 Autoregressive Suggestions: Consider using a relatively long history data window for forecasting. Enable Information Sharing to improve Forecast Accuracy.")
         
         elif demand_type == "ARMA Demand":
-            st.info("💡 ARMA DemandSuggestions:Thistype ofDemand PatternCombinedDoneHistoryTrendandRandom shocks，We recommend usingadaptive order strategy")
+            st.info("💡 ARMA Demand: This demand pattern combines historical trends and random shocks. We recommend using an adaptive order strategy.")
         
         elif demand_type == "Jump Diffusion":
             st.warning("⚠️ Jump Diffusion Warning: Demand may appear with sudden jumps. Suggest increasing safety inventory and enabling rapid response mechanisms.")
         
         elif demand_type == "Poisson Jump":
-            st.info("💡 Poisson JumpSuggestions:DemandJumpFollows PoissonProcess，We recommend usingBased onProbabilityInventoryManagementStrategy")
+            st.info("💡 Poisson Jump: Demand jumps follow a Poisson process. We recommend using a probability-based inventory management strategy.")
         
         elif demand_type == "Regime Switching":
-            st.warning("⚠️ Regime SwitchingWarning:Demand may switch between different states，We recommend usingMultiStatusForecastModelandflexibleInventoryStrategy")
+            st.warning("⚠️ Regime Switching Warning: Demand may switch between different states. We recommend using a multi-state forecasting model and flexible inventory strategy.")
         
         elif demand_type == "Volatility Clustering":
-            st.info("💡 Volatility ClusteringSuggestions:DemandFluctuationnesswillClusteringappears，We suggest increasing inventory buffer in high-fluctuation periods and optimizing cost in low-fluctuation periods")
+            st.info("💡 Volatility Clustering: Demand fluctuations tend to appear in clusters. We suggest increasing inventory buffer in high-fluctuation periods and optimizing costs in low-fluctuation periods.")
         
-        # GeneralSuggestions
+        # General suggestions
         if cv > 1.0:
             st.warning("⚠️ Unstable Demand General Suggestions: CV is very high. Strongly suggest enabling Information Sharing to improve Supply Chain Stability.")
 
@@ -4568,7 +4638,7 @@ Decision Explanation:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            # AutocorrelationAnalysis
+            # Autocorrelation analysis
             if len(preview_demands) > 10:
                 autocorr = np.corrcoef(preview_demands[:-1], preview_demands[1:])[0, 1]
                 if not np.isnan(autocorr):
@@ -4581,42 +4651,42 @@ Decision Explanation:
             st.metric("CV", f"{cv:.3f}")
         
         with col2:
-            # SkewnessandKurtosis
+            # Skewness and kurtosis
             skewness = stats.skew(preview_demands)
             kurtosis = stats.kurtosis(preview_demands)
             st.metric("Skewness", f"{skewness:.3f}")
             st.metric("Kurtosis", f"{kurtosis:.3f}")
         
         with col3:
-            # JumpDetect（SimpleSingleVerThis）
+            # Jump detection (simple version)
             if len(preview_demands) > 5:
                 diffs = np.diff(preview_demands)
                 large_jumps = np.sum(np.abs(diffs) > 2 * np.std(diffs))
                 st.metric("Large Jump Count", f"{large_jumps}")
             
-            # TrendDetect
+            # Trend detection
             if len(preview_demands) > 10:
                 slope, _, r_value, p_value, _ = stats.linregress(range(len(preview_demands)), preview_demands)
                 if p_value < 0.05:
-                    trend_strength = "Strong" if abs(r_value) > 0.7 else "in" if abs(r_value) > 0.3 else "Weak"
+                    trend_strength = "Strong" if abs(r_value) > 0.7 else "Moderate" if abs(r_value) > 0.3 else "Weak"
                     trend_direction = "Rising" if slope > 0 else "Falling"
                     st.metric("Trend", f"{trend_direction}({trend_strength})")
                 else:
                     st.metric("Trend", "No Significant Trend")
         
-        # ModeSpecificAnalysis
+        # Mode-specific analysis
         if demand_pattern == "Autoregressive":
-            st.info("📈 AutoregressiveCharacteristics:Correlation between current and historical demand")
+            st.info("📈 Autoregressive: Correlation between current and historical demand")
         elif demand_pattern == "ARMA Demand":
-            st.info("📊 ARMACharacteristics:CombinedHistoryTrendandRandom shock compositeMode")
+            st.info("📊 ARMA: Combined historical trend and random shock composite pattern")
         elif demand_pattern == "Jump Diffusion":
-            st.info("🚀 JumpDiffusionCharacteristics:Sudden jumps within continuous change")
+            st.info("🚀 Jump Diffusion: Sudden jumps within continuous change")
         elif demand_pattern == "Poisson Jump":
-            st.info("⚡ Poisson JumpCharacteristics:Demand jumps at random time intervals")
+            st.info("⚡ Poisson Jump: Demand jumps at random time intervals")
         elif demand_pattern == "Regime Switching":
-            st.info("🔄 Regime ConversionCharacteristics:Switching of demand between different states")
+            st.info("🔄 Regime Switching: Demand switches between different states")
         elif demand_pattern == "Volatility Clustering":
-            st.info("📈 Volatility Rate ClusteringCharacteristics:Temporal clustering effect of volatility")
+            st.info("📈 Volatility Clustering: Temporal clustering effect of volatility")
 
 
 def main():
