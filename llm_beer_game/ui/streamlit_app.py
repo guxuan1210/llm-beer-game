@@ -139,35 +139,30 @@ class StreamlitBeerGameApp:
         
         # Basic Settings
         st.sidebar.header("Basic Settings")
-        config_type = st.sidebar.selectbox(
-            "Config Template",
-            ["Custom", "Default Config", "Information Sharing", "Rule-Based", "GPT-OSS 20B Local Model"],
-            index=1,
-            help="⚠️ Default Config uses step demand (demand=4). For random demand, select 'Custom' and choose 'Random Demand' below. GPT-OSS config requires local Ollama service to be running."
-        )
+        config_type = "Default Config"
         
         # Debug Features Toggle
-        st.sidebar.header("🔧 Debug Features")
-        enable_prompt_debug = st.sidebar.checkbox(
-            "Enable Prompt Debugging",
-            value=False,
-            help="When enabled, can view and edit each role's prompts in real-time during simulation"
-        )
-        
-        if enable_prompt_debug:
-            debug_realtime = st.sidebar.checkbox(
-                "Show Prompts in Real-Time",
-                value=True,
-                help="Show current round prompts in real-time during simulation"
-            )
-            debug_allow_edit = st.sidebar.checkbox(
-                "Allow Prompt Editing",
+        with st.sidebar.expander("🔧 Debug Features", expanded=False):
+            enable_prompt_debug = st.checkbox(
+                "Enable Prompt Debugging",
                 value=False,
-                help="Allow prompt editing during simulation (experimental feature)"
+                help="When enabled, can view and edit each role's prompts in real-time during simulation"
             )
-        else:
-            debug_realtime = False
-            debug_allow_edit = False
+
+            if enable_prompt_debug:
+                debug_realtime = st.checkbox(
+                    "Show Prompts in Real-Time",
+                    value=True,
+                    help="Show current round prompts in real-time during simulation"
+                )
+                debug_allow_edit = st.checkbox(
+                    "Allow Prompt Editing",
+                    value=False,
+                    help="Allow prompt editing during simulation (experimental feature)"
+                )
+            else:
+                debug_realtime = False
+                debug_allow_edit = False
         
         # Simulation Parameters
         st.sidebar.header("Simulation Parameters")
@@ -223,9 +218,9 @@ class StreamlitBeerGameApp:
                 random_min = st.slider("Min Demand", 0, 20, 0)
                 random_max = st.slider("Max Demand", 5, 50, 10)
             elif demand_pattern == "Step Demand":
-                initial_demand = st.slider("Initial Demand", 0, 30, 1)
-                step_demand = st.slider("Step Demand", 1, 60, 1)
-                step_week = st.slider("Step Week", 5, 30, 15)
+                initial_demand = st.slider("Initial Demand", 0, 30, 4)
+                step_demand = st.slider("Step Demand", 1, 60, 8)
+                step_week = st.slider("Step Week", 5, 30, 5)
             elif demand_pattern == "Seasonal Demand":
                 base_demand = st.slider("Base Demand", 10, 40, 25)
                 amplitude = st.slider("Seasonal Amplitude", 5, 20, 10)
@@ -386,10 +381,16 @@ class StreamlitBeerGameApp:
                     # Need to convert UI config to demand pattern parameters
                     pattern_type = self._get_pattern_type_from_ui(demand_pattern)
                     distribution_params = self._build_distribution_params(demand_config)
-                    
                     demand_pattern_obj = DemandPattern(
                         pattern_type=pattern_type,
-                        distribution_params=distribution_params
+                        base_demand=demand_config.get('initial_demand', demand_config.get('demand', 4)),
+                        step_change=(demand_config.get('step_demand', 0) - demand_config.get('initial_demand', 4)) if pattern_type == 'step' else 0,
+                        step_round=demand_config.get('step_week', 5),
+                        seasonal_amplitude=demand_config.get('amplitude', 0.0),
+                        seasonal_period=demand_config.get('period', 12),
+                        random_min=demand_config.get('min_demand', 1),
+                        random_max=demand_config.get('max_demand', 10),
+                        distribution_params=distribution_params,
                     )
                     
                     # Create temp GameEngine instance for demand generation
@@ -446,7 +447,7 @@ class StreamlitBeerGameApp:
                         hovermode='x unified'
                     )
                     
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                     
                     # Display Statistics Info
                     col1, col2, col3, col4 = st.columns(4)
@@ -534,31 +535,26 @@ class StreamlitBeerGameApp:
             distributor_order_lead_time = st.slider("Distributor Order Lead Time", 0, 5, 0)
             manufacturer_order_lead_time = st.slider("Manufacturer Order Lead Time", 0, 5, 0)
         
-        # Transport Lead Time
-        st.sidebar.subheader("🚚 Transport Lead Time")
-        retailer_transport_lead_time = st.sidebar.slider("Retailer Transport Lead Time", 1, 5, 2)
-        wholesaler_transport_lead_time = st.sidebar.slider("Wholesaler Transport Lead Time", 1, 5, 2)
-        distributor_transport_lead_time = st.sidebar.slider("Distributor Transport Lead Time", 1, 5, 2)
-        
-        # Production Lead Time
-        st.sidebar.subheader("🏭 Production Lead Time")
-        manufacturer_production_lead_time = st.sidebar.slider("Manufacturer Production Lead Time", 1, 8, 2)
+        # Transport & Production Lead Time (collapsible)
+        with st.sidebar.expander("🚚 Transport & 🏭 Production Lead Time", expanded=False):
+            retailer_transport_lead_time = st.slider("Retailer Transport Lead Time", 1, 5, 2)
+            wholesaler_transport_lead_time = st.slider("Wholesaler Transport Lead Time", 1, 5, 2)
+            distributor_transport_lead_time = st.slider("Distributor Transport Lead Time", 1, 5, 2)
+            manufacturer_production_lead_time = st.slider("Manufacturer Production Lead Time", 1, 8, 2)
         
         # 📦 Initial Inventory& In-Transit Config
-        st.sidebar.header("📦 Initial Inventory& In-Transit Config")
-        st.sidebar.caption("Set initial Inventory and In-Transit Pipeline for each Role(Per-period arrival quantity, comma-separated). If length is insufficient, auto pad with 0 to effective Lead Time length.")
-        
-        # Initial Inventory Input (Four Roles)
-        retailer_initial_inventory = st.sidebar.number_input("Retailer Initial Inventory", min_value=0, value=12, step=1)
-        wholesaler_initial_inventory = st.sidebar.number_input("Wholesaler Initial Inventory", min_value=0, value=12, step=1)
-        distributor_initial_inventory = st.sidebar.number_input("Distributor Initial Inventory", min_value=0, value=12, step=1)
-        manufacturer_initial_inventory = st.sidebar.number_input("Manufacturer Initial Inventory", min_value=0, value=12, step=1)
-        
-        # Initial In-Transit Input (Four Roles, parse string to list)
-        retailer_initial_in_transit_str = st.sidebar.text_input("Retailer Initial In-Transit(Comma-separated)", value="0,0")
-        wholesaler_initial_in_transit_str = st.sidebar.text_input("Wholesaler Initial In-Transit(Comma-separated)", value="0,0")
-        distributor_initial_in_transit_str = st.sidebar.text_input("Distributor Initial In-Transit(Comma-separated)", value="0,0")
-        manufacturer_initial_in_transit_str = st.sidebar.text_input("Manufacturer Initial In-Transit(Comma-separated)", value="0,0")
+        with st.sidebar.expander("📦 Initial Inventory & In-Transit", expanded=False):
+            st.caption("Set initial Inventory and In-Transit Pipeline for each Role (Per-period arrival quantity, comma-separated). If length is insufficient, auto pad with 0 to effective Lead Time length.")
+
+            retailer_initial_inventory = st.number_input("Retailer Initial Inventory", min_value=0, value=12, step=1)
+            wholesaler_initial_inventory = st.number_input("Wholesaler Initial Inventory", min_value=0, value=12, step=1)
+            distributor_initial_inventory = st.number_input("Distributor Initial Inventory", min_value=0, value=12, step=1)
+            manufacturer_initial_inventory = st.number_input("Manufacturer Initial Inventory", min_value=0, value=12, step=1)
+
+            retailer_initial_in_transit_str = st.text_input("Retailer Initial In-Transit (Comma-separated)", value="0,0")
+            wholesaler_initial_in_transit_str = st.text_input("Wholesaler Initial In-Transit (Comma-separated)", value="0,0")
+            distributor_initial_in_transit_str = st.text_input("Distributor Initial In-Transit (Comma-separated)", value="0,0")
+            manufacturer_initial_in_transit_str = st.text_input("Manufacturer Initial In-Transit (Comma-separated)", value="0,0")
         
         def _parse_in_transit(s: str):
             # Parse comma-separated in-transit string to non-negative integer list; ignore non-numeric and empty items
@@ -597,14 +593,13 @@ class StreamlitBeerGameApp:
             st.session_state.cost_configs = {
                 'unified': {
                     'holding_cost': 0.5,
-                    'shortage_cost': 1.0,
-                    'order_cost': 0.0
+                    'shortage_cost': 1.0
                 },
                 'individual': {
-                    'retailer': {'holding_cost': 0.5, 'shortage_cost': 1.0, 'order_cost': 0.0},
-                    'wholesaler': {'holding_cost': 0.5, 'shortage_cost': 1.0, 'order_cost': 0.0},
-                    'distributor': {'holding_cost': 0.5, 'shortage_cost': 1.0, 'order_cost': 0.0},
-                    'manufacturer': {'holding_cost': 0.5, 'shortage_cost': 1.0, 'order_cost': 0.0}
+                    'retailer': {'holding_cost': 0.5, 'shortage_cost': 1.0},
+                    'wholesaler': {'holding_cost': 0.5, 'shortage_cost': 1.0},
+                    'distributor': {'holding_cost': 0.5, 'shortage_cost': 1.0},
+                    'manufacturer': {'holding_cost': 0.5, 'shortage_cost': 1.0}
                 }
             }
         
@@ -633,27 +628,17 @@ class StreamlitBeerGameApp:
                 0.1,
                 help="Penalty cost per unit stockout per week"
             )
-            unified_order = st.sidebar.slider(
-                "Order Processing Cost", 
-                0.0, 1.0, 
-                st.session_state.cost_configs['unified']['order_cost'], 
-                0.05,
-                help="Fixed processing cost per order"
-            )
-            
             # Update unified Config
             st.session_state.cost_configs['unified'] = {
                 'holding_cost': unified_holding,
-                'shortage_cost': unified_shortage,
-                'order_cost': unified_order
+                'shortage_cost': unified_shortage
             }
-            
+
             # Apply unified Config to all Participants
             for participant in ['retailer', 'wholesaler', 'distributor', 'manufacturer']:
                 st.session_state.cost_configs['individual'][participant] = {
                     'holding_cost': unified_holding,
-                    'shortage_cost': unified_shortage,
-                    'order_cost': unified_order
+                    'shortage_cost': unified_shortage
                 }
             
             # Display Application Info
@@ -679,19 +664,10 @@ class StreamlitBeerGameApp:
                         0.1,
                         key=f"{key}_shortage"
                     )
-                    order = st.slider(
-                        f"{name} - Order Processing Cost",
-                        0.0, 1.0,
-                        st.session_state.cost_configs['individual'][key]['order_cost'],
-                        0.05,
-                        key=f"{key}_order"
-                    )
-                    
                     # Update individual Config
                     st.session_state.cost_configs['individual'][key] = {
                         'holding_cost': holding,
-                        'shortage_cost': shortage,
-                        'order_cost': order
+                        'shortage_cost': shortage
                     }
         
         # Get current Cost Config
@@ -703,7 +679,6 @@ class StreamlitBeerGameApp:
                 st.write(f"**{name}**")
                 st.write(f"- Holding: {current_costs[key]['holding_cost']:.1f}")
                 st.write(f"- Stockout: {current_costs[key]['shortage_cost']:.1f}")
-                st.write(f"- Order: {current_costs[key]['order_cost']:.2f}")
                 st.write("---")
         
         # LLM Config
@@ -730,6 +705,7 @@ class StreamlitBeerGameApp:
         preset_temp = 0.7
         preset_max_tokens = 150
         preset_timeout = 30
+        preset_is_thinking = False
         if selected_preset_key != "__manual__":
             preset = all_presets[selected_preset_key]
             preset_provider = preset.provider_label
@@ -738,6 +714,7 @@ class StreamlitBeerGameApp:
             preset_temp = preset.default_temperature
             preset_max_tokens = preset.default_max_tokens
             preset_timeout = preset.default_timeout
+            preset_is_thinking = getattr(preset, 'is_thinking_model', False)
             st.sidebar.info(f"Preset: {preset.name} — {preset.description}")
 
         # --- Provider selection ---
@@ -775,6 +752,38 @@ class StreamlitBeerGameApp:
         max_tokens_val = preset_max_tokens
         timeout_val = preset_timeout
 
+        # Default base URLs for each provider
+        _provider_default_base_urls = {
+            "OpenAI": "https://api.openai.com/v1",
+            "Anthropic": "",
+            "Ollama": "http://localhost:11434",
+            "DeepSeek": "https://api.deepseek.com",
+            "Zhipu GLM": "https://open.bigmodel.cn/api/paas/v4",
+            "Moonshot Kimi": "https://api.moonshot.cn/v1",
+            "Qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "OpenRouter": "https://openrouter.ai/api/v1",
+            "Groq": "https://api.groq.com/openai/v1",
+            "Together AI": "https://api.together.xyz/v1",
+            "Custom OpenAI-Compatible": "http://localhost:8080/v1",
+            "GPT-OSS": "http://localhost:11434",
+        }
+
+        # Auto-update base_url when provider changes
+        if "prev_llm_provider" not in st.session_state:
+            st.session_state.prev_llm_provider = llm_provider
+        if st.session_state.prev_llm_provider != llm_provider:
+            base_url = _provider_default_base_urls.get(llm_provider, "")
+            st.session_state.prev_llm_provider = llm_provider
+
+        # Unified Base URL input (shown for all providers)
+        if not base_url:
+            base_url = _provider_default_base_urls.get(llm_provider, "")
+        base_url = st.sidebar.text_input(
+            "Base URL",
+            value=base_url,
+            help=f"API endpoint for {llm_provider}"
+        )
+
         # Provider-specific fields
         if llm_provider in ("OpenAI", "DeepSeek", "Zhipu GLM", "Moonshot Kimi", "Qwen",
                             "OpenRouter", "Groq", "Together AI", "Custom OpenAI-Compatible"):
@@ -796,38 +805,27 @@ class StreamlitBeerGameApp:
                                               index=anthropic_models.index(model_name) if model_name in anthropic_models else 1)
             api_key = st.sidebar.text_input("Anthropic API Key", type="password")
         elif llm_provider == "DeepSeek":
-            base_url = st.sidebar.text_input("Base URL", value=base_url if base_url else "https://api.deepseek.com")
             model_name = st.sidebar.text_input("Model", value=model_name if model_name else "deepseek-chat",
                                                help="deepseek-chat (V3) or deepseek-reasoner (R1)")
         elif llm_provider == "Zhipu GLM":
-            base_url = st.sidebar.text_input("Base URL", value=base_url if base_url else "https://open.bigmodel.cn/api/paas/v4")
             model_name = st.sidebar.text_input("Model", value=model_name if model_name else "glm-4-flash",
                                                help="glm-4, glm-4-flash, glm-4-plus, etc.")
         elif llm_provider == "Moonshot Kimi":
-            base_url = st.sidebar.text_input("Base URL", value=base_url if base_url else "https://api.moonshot.cn/v1")
             model_name = st.sidebar.text_input("Model", value=model_name if model_name else "moonshot-v1-8k")
         elif llm_provider == "Qwen":
-            base_url = st.sidebar.text_input("Base URL",
-                                             value=base_url if base_url else "https://dashscope.aliyuncs.com/compatible-mode/v1")
             model_name = st.sidebar.text_input("Model", value=model_name if model_name else "qwen-max",
                                                help="qwen-max, qwen-plus, qwen-turbo, etc.")
         elif llm_provider == "OpenRouter":
-            base_url = st.sidebar.text_input("Base URL", value=base_url if base_url else "https://openrouter.ai/api/v1")
             model_name = st.sidebar.text_input("Model", value=model_name if model_name else "openai/gpt-4o",
                                                help="Full model string e.g. openai/gpt-4o, anthropic/claude-sonnet-4")
         elif llm_provider == "Groq":
-            base_url = st.sidebar.text_input("Base URL", value=base_url if base_url else "https://api.groq.com/openai/v1")
             model_name = st.sidebar.text_input("Model", value=model_name if model_name else "llama3-70b-8192")
         elif llm_provider == "Together AI":
-            base_url = st.sidebar.text_input("Base URL", value=base_url if base_url else "https://api.together.xyz/v1")
             model_name = st.sidebar.text_input("Model", value=model_name if model_name else "meta-llama/Llama-3-70b-chat-hf")
         elif llm_provider == "Custom OpenAI-Compatible":
-            base_url = st.sidebar.text_input("Base URL", value=base_url if base_url else "http://localhost:8080/v1")
             model_name = st.sidebar.text_input("Model", value=model_name if model_name else "",
                                                help="Enter model name for your custom endpoint")
         elif llm_provider == "Ollama":
-            base_url = st.sidebar.text_input("Base URL", value=base_url if base_url else "http://localhost:11434")
-
             # Dynamically fetch available Model list
             try:
                 import sys
@@ -895,7 +893,6 @@ class StreamlitBeerGameApp:
                 model_name = st.sidebar.text_input("Manual Model Name", model_name if model_name else "gemma3:27b")
         elif llm_provider == "GPT-OSS":
             model_name = st.sidebar.text_input("Model Name", model_name if model_name else "gpt-oss:20b")
-            base_url = st.sidebar.text_input("Base URL", base_url if base_url else "http://localhost:11434")
             if st.sidebar.button("Check GPT-OSS Service Status"):
                 try:
                     from llm.llm_client import GPTOSSClient
@@ -911,7 +908,7 @@ class StreamlitBeerGameApp:
         with st.sidebar.expander("Advanced LLM Settings", expanded=False):
             temperature_val = st.slider("Temperature", 0.0, 2.0, temperature_val, 0.05)
             max_tokens_val = st.slider("Max Tokens", 10, 500, max_tokens_val, 10)
-            timeout_val = st.slider("Timeout (s)", 10, 120, timeout_val, 5)
+            timeout_val = st.slider("Timeout (s)", 10, 300, timeout_val, 5)
 
         # --- Save custom preset ---
         with st.sidebar.expander("Save Custom Preset", expanded=False):
@@ -1007,267 +1004,267 @@ class StreamlitBeerGameApp:
         
 
         # Order Quantity Limit Config
-        st.sidebar.header("📊 Order Quantity Limit")
-        enable_order_limits = st.sidebar.checkbox(
-            "Enable Min/Max Order Quantity Limit", 
-            value=True,
-            help="Set min and max Order Quantity range limits for each Role"
-        )
-        
-        # Discrete Point Select Config
-        enable_discrete_points = st.sidebar.checkbox(
-            "Enable Discrete Point Select",
-            value=False,
-            help="Set Discrete Order Quantity points for each Role; Agents can only select from these points"
-        )
-        
-        if enable_discrete_points:
-            st.sidebar.info("Please enter comma-separated integers as discrete order points for each role")
-        
-        if enable_order_limits and enable_discrete_points:
-            st.sidebar.warning("Note: When both limits are enabled, Discrete Point Select takes priority; range limits serve as Validation boundaries")
-        
-        
-        # Adaptive Order Quantity Limit Config
-        enable_adaptive_limits = st.sidebar.checkbox(
-            "Enable Adaptive Order Quantity Limit", 
-            value=False,
-            help="Dynamically adjust Order Quantity Limits based on Retailer terminal Demand"
-        )
-        
-        adaptive_method = "ratio"
-        adaptive_base_min = 3
-        adaptive_base_max = 8
-        
-        if enable_adaptive_limits:
-            st.sidebar.subheader("Adaptive Limit Config")
-            adaptive_method = st.sidebar.selectbox(
-                "Adaptive Method",
-                options=["ratio", "window", "forecast"],
-                format_func=lambda x: {
-                    "ratio": "Demand Ratio Method",
-                    "window": "Sliding Window Method",
-                    "forecast": "Forecast Model Method"
-                }.get(x, x),
-                help="Select Adaptive Limit Calculate Method"
+        with st.sidebar.expander("📊 Order Quantity Limit", expanded=False):
+            enable_order_limits = st.checkbox(
+                "Enable Min/Max Order Quantity Limit",
+                value=True,
+                help="Set min and max Order Quantity range limits for each Role"
             )
-            
-            adaptive_base_min = st.sidebar.number_input(
-                "Base Min Order Quantity", 
-                min_value=1, 
-                max_value=20, 
-                value=3, 
-                key="adaptive_base_min"
+
+            # Discrete Point Select Config
+            enable_discrete_points = st.checkbox(
+                "Enable Discrete Point Select",
+                value=False,
+                help="Set Discrete Order Quantity points for each Role; Agents can only select from these points"
             )
-            
-            adaptive_base_max = st.sidebar.number_input(
-                "Base Max Order Quantity", 
-                min_value=adaptive_base_min, 
-                max_value=500, 
-                value=max(15, adaptive_base_min + 5), 
-                key="adaptive_base_max"
+
+            if enable_discrete_points:
+                st.info("Please enter comma-separated integers as discrete order points for each role")
+
+            if enable_order_limits and enable_discrete_points:
+                st.warning("Note: When both limits are enabled, Discrete Point Select takes priority; range limits serve as Validation boundaries")
+
+
+            # Adaptive Order Quantity Limit Config
+            enable_adaptive_limits = st.checkbox(
+                "Enable Adaptive Order Quantity Limit",
+                value=False,
+                help="Dynamically adjust Order Quantity Limits based on Retailer terminal Demand"
             )
-            
-            # Based on selected method, display different parameters
-            if adaptive_method == "ratio":
-                min_ratio = st.sidebar.slider(
-                    "Min Ratio", 
-                    min_value=0.1, 
-                    max_value=1.0, 
-                    value=0.5, 
-                    step=0.1,
-                    help="Min Order to Demand Ratio"
-                )
-                max_ratio = st.sidebar.slider(
-                    "Max Ratio", 
-                    min_value=1.0, 
-                    max_value=3.0, 
-                    value=1.5, 
-                    step=0.1,
-                    help="Max Order to Demand Ratio"
-                )
-            
-            elif adaptive_method == "window":
-                window_size = st.sidebar.slider(
-                    "Window Size", 
-                    min_value=2, 
-                    max_value=10, 
-                    value=5, 
-                    step=1,
-                    help="Sliding Window Size"
-                )
-                alpha = st.sidebar.slider(
-                    "Min Limit Coefficient", 
-                    min_value=0.5, 
-                    max_value=2.0, 
-                    value=1.0, 
-                    step=0.1,
-                    help="Min Limit Std Dev Coefficient"
-                )
-                beta = st.sidebar.slider(
-                    "Max Limit Coefficient", 
-                    min_value=1.0, 
-                    max_value=3.0, 
-                    value=2.0, 
-                    step=0.1,
-                    help="Max Limit Std Dev Coefficient"
-                )
-            
-            elif adaptive_method == "forecast":
-                forecast_horizon = st.sidebar.slider(
-                    "Forecast Periods", 
-                    min_value=1, 
-                    max_value=5, 
-                    value=3, 
-                    step=1,
-                    help="Forecast future periods"
-                )
-                forecast_weight = st.sidebar.slider(
-                    "Forecast Weight", 
-                    min_value=0.1, 
-                    max_value=1.0, 
-                    value=0.7, 
-                    step=0.1,
-                    help="Forecast Value Weight"
-                )
-            
-            adaptation_rate = st.sidebar.slider(
-                "Adaptation Rate", 
-                min_value=0.1, 
-                max_value=1.0, 
-                value=0.3, 
-                step=0.1,
-                help="Limit Adjust Rate(0-1)"
-            )
+
+            adaptive_method = "ratio"
+            adaptive_base_min = 3
+            adaptive_base_max = 8
         
-        if enable_order_limits or enable_discrete_points:
-            st.sidebar.subheader("Retailer Order Quantity Limit")
-            if enable_discrete_points:
-                retailer_discrete_points = st.sidebar.text_input(
-                    "Discrete Order Point",
-                    value="4,8,12,16,20",
-                    key="retailer_discrete",
-                    help="Input comma-separated integers as optional Order points"
+            if enable_adaptive_limits:
+                st.subheader("Adaptive Limit Config")
+                adaptive_method = st.selectbox(
+                    "Adaptive Method",
+                    options=["ratio", "window", "forecast"],
+                    format_func=lambda x: {
+                        "ratio": "Demand Ratio Method",
+                        "window": "Sliding Window Method",
+                        "forecast": "Forecast Model Method"
+                    }.get(x, x),
+                    help="Select Adaptive Limit Calculate Method"
                 )
-            if enable_order_limits and not enable_discrete_points:
-                retailer_min_order = st.sidebar.number_input(
-                    "Min Order Quantity", 
-                    min_value=0, 
-                    max_value=1000, 
-                    value=3, 
-                    key="retailer_min"
+
+                adaptive_base_min = st.number_input(
+                    "Base Min Order Quantity",
+                    min_value=1,
+                    max_value=20,
+                    value=3,
+                    key="adaptive_base_min"
                 )
-                retailer_max_order = st.sidebar.number_input(
-                    "Max Order Quantity", 
-                    min_value=retailer_min_order, 
-                    max_value=1000, 
-                    value=max(10, retailer_min_order), 
-                    key="retailer_max"
+
+                adaptive_base_max = st.number_input(
+                    "Base Max Order Quantity",
+                    min_value=adaptive_base_min,
+                    max_value=500,
+                    value=max(15, adaptive_base_min + 5),
+                    key="adaptive_base_max"
                 )
-            
-            st.sidebar.subheader("Wholesaler Order Quantity Limit")
-            if enable_discrete_points:
-                wholesaler_discrete_points = st.sidebar.text_input(
-                    "Discrete Order Point",
-                    value="4,8,12,16,20",
-                    key="wholesaler_discrete",
-                    help="Input comma-separated integers as optional Order points"
+
+                # Based on selected method, display different parameters
+                if adaptive_method == "ratio":
+                    min_ratio = st.slider(
+                        "Min Ratio",
+                        min_value=0.1,
+                        max_value=1.0,
+                        value=0.5,
+                        step=0.1,
+                        help="Min Order to Demand Ratio"
+                    )
+                    max_ratio = st.slider(
+                        "Max Ratio",
+                        min_value=1.0,
+                        max_value=3.0,
+                        value=1.5,
+                        step=0.1,
+                        help="Max Order to Demand Ratio"
+                    )
+
+                elif adaptive_method == "window":
+                    window_size = st.slider(
+                        "Window Size",
+                        min_value=2,
+                        max_value=10,
+                        value=5,
+                        step=1,
+                        help="Sliding Window Size"
+                    )
+                    alpha = st.slider(
+                        "Min Limit Coefficient",
+                        min_value=0.5,
+                        max_value=2.0,
+                        value=1.0,
+                        step=0.1,
+                        help="Min Limit Std Dev Coefficient"
+                    )
+                    beta = st.slider(
+                        "Max Limit Coefficient",
+                        min_value=1.0,
+                        max_value=3.0,
+                        value=2.0,
+                        step=0.1,
+                        help="Max Limit Std Dev Coefficient"
+                    )
+
+                elif adaptive_method == "forecast":
+                    forecast_horizon = st.slider(
+                        "Forecast Periods",
+                        min_value=1,
+                        max_value=5,
+                        value=3,
+                        step=1,
+                        help="Forecast future periods"
+                    )
+                    forecast_weight = st.slider(
+                        "Forecast Weight",
+                        min_value=0.1,
+                        max_value=1.0,
+                        value=0.7,
+                        step=0.1,
+                        help="Forecast Value Weight"
+                    )
+
+                adaptation_rate = st.slider(
+                    "Adaptation Rate",
+                    min_value=0.1,
+                    max_value=1.0,
+                    value=0.3,
+                    step=0.1,
+                    help="Limit Adjust Rate(0-1)"
                 )
-            if enable_order_limits and not enable_discrete_points:
-                wholesaler_min_order = st.sidebar.number_input(
-                    "Min Order Quantity", 
-                    min_value=0, 
-                    max_value=1000, 
-                    value=3, 
-                    key="wholesaler_min"
-                )
-                wholesaler_max_order = st.sidebar.number_input(
-                    "Max Order Quantity", 
-                    min_value=wholesaler_min_order, 
-                    max_value=1000, 
-                    value=max(10, wholesaler_min_order), 
-                    key="wholesaler_max"
-                )
-            
-            st.sidebar.subheader("Distributor Order Quantity Limit")
-            if enable_discrete_points:
-                distributor_discrete_points = st.sidebar.text_input(
-                    "Discrete Order Point",
-                    value="4,8,12,16,20",
-                    key="distributor_discrete",
-                    help="Input comma-separated integers as optional Order points"
-                )
-            if enable_order_limits and not enable_discrete_points:
-                distributor_min_order = st.sidebar.number_input(
-                    "Min Order Quantity", 
-                    min_value=0, 
-                    max_value=1000, 
-                    value=3, 
-                    key="distributor_min"
-                )
-                distributor_max_order = st.sidebar.number_input(
-                    "Max Order Quantity", 
-                    min_value=distributor_min_order, 
-                    max_value=1000, 
-                    value=max(10, distributor_min_order), 
-                    key="distributor_max"
-                )
-            
-            st.sidebar.subheader("Manufacturer Production Quantity Limit")
-            if enable_discrete_points:
-                manufacturer_discrete_points = st.sidebar.text_input(
-                    "Discrete Production Point",
-                    value="4,8,12,16,20",
-                    key="manufacturer_discrete",
-                    help="Input comma-separated integers as optional Production points"
-                )
-            if enable_order_limits and not enable_discrete_points:
-                manufacturer_min_order = st.sidebar.number_input(
-                    "Min Production Quantity", 
-                    min_value=0, 
-                    max_value=1000, 
-                    value=3, 
-                    key="manufacturer_min"
-                )
-                manufacturer_max_order = st.sidebar.number_input(
-                    "Max Production Quantity", 
-                    min_value=manufacturer_min_order, 
-                    max_value=1000, 
-                    value=max(10, manufacturer_min_order), 
-                    key="manufacturer_max"
-                )
-            
-            if not enable_discrete_points:
-                st.sidebar.success(
-                    "✅ Order Quantity Limit already enabled:\n"
-                    f"• Retailer: [{retailer_min_order}, {retailer_max_order}]\n"
-                    f"• Wholesaler: [{wholesaler_min_order}, {wholesaler_max_order}]\n"
-                    f"• Distributor: [{distributor_min_order}, {distributor_max_order}]\n"
-                    f"• Manufacturer: [{manufacturer_min_order}, {manufacturer_max_order}]\n"
-                    "• Orders exceeding the limit will be automatically adjusted"
-                )
+        
+            if enable_order_limits or enable_discrete_points:
+                st.subheader("Retailer Order Quantity Limit")
+                if enable_discrete_points:
+                    retailer_discrete_points = st.text_input(
+                        "Discrete Order Point",
+                        value="4,8,12,16,20",
+                        key="retailer_discrete",
+                        help="Input comma-separated integers as optional Order points"
+                    )
+                if enable_order_limits and not enable_discrete_points:
+                    retailer_min_order = st.number_input(
+                        "Min Order Quantity",
+                        min_value=0,
+                        max_value=1000,
+                        value=3,
+                        key="retailer_min"
+                    )
+                    retailer_max_order = st.number_input(
+                        "Max Order Quantity",
+                        min_value=retailer_min_order,
+                        max_value=1000,
+                        value=max(10, retailer_min_order),
+                        key="retailer_max"
+                    )
+
+                st.subheader("Wholesaler Order Quantity Limit")
+                if enable_discrete_points:
+                    wholesaler_discrete_points = st.text_input(
+                        "Discrete Order Point",
+                        value="4,8,12,16,20",
+                        key="wholesaler_discrete",
+                        help="Input comma-separated integers as optional Order points"
+                    )
+                if enable_order_limits and not enable_discrete_points:
+                    wholesaler_min_order = st.number_input(
+                        "Min Order Quantity",
+                        min_value=0,
+                        max_value=1000,
+                        value=3,
+                        key="wholesaler_min"
+                    )
+                    wholesaler_max_order = st.number_input(
+                        "Max Order Quantity",
+                        min_value=wholesaler_min_order,
+                        max_value=1000,
+                        value=max(10, wholesaler_min_order),
+                        key="wholesaler_max"
+                    )
+
+                st.subheader("Distributor Order Quantity Limit")
+                if enable_discrete_points:
+                    distributor_discrete_points = st.text_input(
+                        "Discrete Order Point",
+                        value="4,8,12,16,20",
+                        key="distributor_discrete",
+                        help="Input comma-separated integers as optional Order points"
+                    )
+                if enable_order_limits and not enable_discrete_points:
+                    distributor_min_order = st.number_input(
+                        "Min Order Quantity",
+                        min_value=0,
+                        max_value=1000,
+                        value=3,
+                        key="distributor_min"
+                    )
+                    distributor_max_order = st.number_input(
+                        "Max Order Quantity",
+                        min_value=distributor_min_order,
+                        max_value=1000,
+                        value=max(10, distributor_min_order),
+                        key="distributor_max"
+                    )
+
+                st.subheader("Manufacturer Production Quantity Limit")
+                if enable_discrete_points:
+                    manufacturer_discrete_points = st.text_input(
+                        "Discrete Production Point",
+                        value="4,8,12,16,20",
+                        key="manufacturer_discrete",
+                        help="Input comma-separated integers as optional Production points"
+                    )
+                if enable_order_limits and not enable_discrete_points:
+                    manufacturer_min_order = st.number_input(
+                        "Min Production Quantity",
+                        min_value=0,
+                        max_value=1000,
+                        value=3,
+                        key="manufacturer_min"
+                    )
+                    manufacturer_max_order = st.number_input(
+                        "Max Production Quantity",
+                        min_value=manufacturer_min_order,
+                        max_value=1000,
+                        value=max(10, manufacturer_min_order),
+                        key="manufacturer_max"
+                    )
+
+                if not enable_discrete_points:
+                    st.success(
+                        "✅ Order Quantity Limit already enabled:\n"
+                        f"• Retailer: [{retailer_min_order}, {retailer_max_order}]\n"
+                        f"• Wholesaler: [{wholesaler_min_order}, {wholesaler_max_order}]\n"
+                        f"• Distributor: [{distributor_min_order}, {distributor_max_order}]\n"
+                        f"• Manufacturer: [{manufacturer_min_order}, {manufacturer_max_order}]\n"
+                        "• Orders exceeding the limit will be automatically adjusted"
+                    )
+                else:
+                    # Parse Discrete Point string into integer list, filtering out 0 and negative numbers
+                    retailer_points = [int(x.strip()) for x in retailer_discrete_points.split(',') if x.strip().isdigit() and int(x.strip()) > 0]
+                    wholesaler_points = [int(x.strip()) for x in wholesaler_discrete_points.split(',') if x.strip().isdigit() and int(x.strip()) > 0]
+                    distributor_points = [int(x.strip()) for x in distributor_discrete_points.split(',') if x.strip().isdigit() and int(x.strip()) > 0]
+                    manufacturer_points = [int(x.strip()) for x in manufacturer_discrete_points.split(',') if x.strip().isdigit() and int(x.strip()) > 0]
+
+                    st.success(
+                        "✅ Discrete Order Point already enabled:\n"
+                        f"• Retailer: {retailer_points}\n"
+                        f"• Wholesaler: {wholesaler_points}\n"
+                        f"• Distributor: {distributor_points}\n"
+                        f"• Manufacturer: {manufacturer_points}\n"
+                        "• Orders will be adjusted to the nearest Discrete Point"
+                    )
             else:
-                # Parse Discrete Point string into integer list, filtering out 0 and negative numbers
-                retailer_points = [int(x.strip()) for x in retailer_discrete_points.split(',') if x.strip().isdigit() and int(x.strip()) > 0]
-                wholesaler_points = [int(x.strip()) for x in wholesaler_discrete_points.split(',') if x.strip().isdigit() and int(x.strip()) > 0]
-                distributor_points = [int(x.strip()) for x in distributor_discrete_points.split(',') if x.strip().isdigit() and int(x.strip()) > 0]
-                manufacturer_points = [int(x.strip()) for x in manufacturer_discrete_points.split(',') if x.strip().isdigit() and int(x.strip()) > 0]
-                
-                st.sidebar.success(
-                    "✅ Discrete Order Point already enabled:\n"
-                    f"• Retailer: {retailer_points}\n"
-                    f"• Wholesaler: {wholesaler_points}\n"
-                    f"• Distributor: {distributor_points}\n"
-                    f"• Manufacturer: {manufacturer_points}\n"
-                    "• Orders will be adjusted to the nearest Discrete Point"
+                st.warning(
+                    "⚠️ Order Quantity Limit Not Enabled\n"
+                    "• Agents can place any quantity of orders\n"
+                    "• May lead to extreme Order Fluctuation\n"
+                    "• Suggest enabling limits to simulate realistic constraints"
                 )
-        else:
-            st.sidebar.warning(
-                "⚠️ Order Quantity Limit Not Enabled\n"
-                "• Agents can place any quantity of orders\n"
-                "• May lead to extreme Order Fluctuation\n"
-                "• Suggest enabling limits to simulate realistic constraints"
-            )
         
         # Build Config Dictionary
         config = {
@@ -1279,6 +1276,9 @@ class StreamlitBeerGameApp:
             "api_key": api_key,
             "model_name": model_name,
             "base_url": base_url,
+            "llm_max_tokens": max_tokens_val,
+            "llm_is_thinking_model": preset_is_thinking,
+            "llm_timeout": timeout_val,
             "enable_info_sharing": enable_info_sharing,
             # Lead Time Parameters
             "retailer_order_lead_time": retailer_order_lead_time,
@@ -1309,7 +1309,8 @@ class StreamlitBeerGameApp:
             "retailer_initial_in_transit": retailer_initial_in_transit,
             "wholesaler_initial_in_transit": wholesaler_initial_in_transit,
             "distributor_initial_in_transit": distributor_initial_in_transit,
-            "manufacturer_initial_in_transit": manufacturer_initial_in_transit
+            "manufacturer_initial_in_transit": manufacturer_initial_in_transit,
+            "enable_demand_forecasting": st.session_state.get("enable_demand_forecasting", False)
         }
         
         # Add Order Quantity Limit Parameters
@@ -1672,38 +1673,7 @@ class StreamlitBeerGameApp:
     
     def create_game_config(self, ui_config: Dict[str, Any]):
         """Based on UI Config, Create Game Config"""
-        if ui_config["config_type"] == "Default Config":
-            config = get_default_config()
-        elif ui_config["config_type"] == "Information Sharing":
-            config = get_info_sharing_config()
-        elif ui_config["config_type"] == "Rule-Based":
-            config = get_rule_based_config()
-        elif ui_config["config_type"] == "GPT-OSS 20B Local Model":
-            try:
-                config = self.config_manager.load_config("gpt_oss_20b.json")
-                st.sidebar.success("✅ GPT-OSS Config Load Success")
-            except FileNotFoundError:
-                st.sidebar.error("❌ GPT-OSS Config File Not Found")
-                config = get_default_config()
-            except Exception as e:
-                st.sidebar.error(f"❌ GPT-OSS config load failed: {str(e)}")
-                config = get_default_config()
-        else:  # Custom Config
-            # Create basic settings rather than using default config
-            from llm_beer_game.config import GameConfig, AgentConfig, DemandConfig, LLMConfig, SimulationConfig, CostConfig
-            config = GameConfig(
-                name="Custom Config",
-                description="User Custom Game Config",
-                retailer=AgentConfig(cost_config=CostConfig()),
-                wholesaler=AgentConfig(cost_config=CostConfig()),
-                distributor=AgentConfig(cost_config=CostConfig()),
-                manufacturer=AgentConfig(cost_config=CostConfig()),
-                demand=DemandConfig(),
-                llm=LLMConfig(),
-                simulation=SimulationConfig()
-            )
-            # Simplified config logging
-            print(f"🔧 Config: {ui_config['config_type']} | Demand: {ui_config['demand_pattern']}")
+        config = get_default_config()
         
         # Update Config Parameters
         config.simulation.total_weeks = ui_config["num_rounds"]
@@ -1721,8 +1691,8 @@ class StreamlitBeerGameApp:
                 role_costs = individual_costs[role]
                 role_config.cost_config.holding_cost = role_costs.get("holding_cost", 0.5)
                 role_config.cost_config.backorder_cost = role_costs.get("shortage_cost", 1.0)
-                role_config.cost_config.order_cost = role_costs.get("order_cost", 0.0)
-                print(f"💰 {role} Cost Config: Holding={role_config.cost_config.holding_cost}, Stockout={role_config.cost_config.backorder_cost}, Order={role_config.cost_config.order_cost}")
+                role_config.cost_config.order_cost = 0.0
+                print(f"💰 {role} Cost Config: Holding={role_config.cost_config.holding_cost}, Stockout={role_config.cost_config.backorder_cost}")
             else:
                 # Use default values as fallback
                 role_config.cost_config.holding_cost = 0.5
@@ -1972,16 +1942,6 @@ class StreamlitBeerGameApp:
         }
         _needs_api_key = {"OpenAI", "Anthropic", "DeepSeek", "Zhipu GLM", "Moonshot Kimi",
                           "Qwen", "OpenRouter", "Groq", "Together AI"}
-        _default_base_urls = {
-            "DeepSeek": "https://api.deepseek.com",
-            "Zhipu GLM": "https://open.bigmodel.cn/api/paas/v4",
-            "Moonshot Kimi": "https://api.moonshot.cn/v1",
-            "Qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            "OpenRouter": "https://openrouter.ai/api/v1",
-            "Groq": "https://api.groq.com/openai/v1",
-            "Together AI": "https://api.together.xyz/v1",
-        }
-
         config.llm.provider = _provider_key_map.get(llm_provider, "mock")
         if ui_config.get("model_name"):
             config.llm.model = ui_config["model_name"]
@@ -1989,9 +1949,17 @@ class StreamlitBeerGameApp:
             config.llm.api_key = ui_config["api_key"]
         if ui_config.get("base_url"):
             config.llm.base_url = ui_config["base_url"]
-        elif llm_provider in _default_base_urls:
-            config.llm.base_url = _default_base_urls[llm_provider]
-        
+
+        # Apply preset max_tokens, timeout, and thinking model flag
+        if ui_config.get("llm_max_tokens"):
+            config.llm.max_tokens = ui_config["llm_max_tokens"]
+        if ui_config.get("llm_timeout"):
+            config.llm.timeout = ui_config["llm_timeout"]
+        if ui_config.get("llm_is_thinking_model"):
+            config.llm.is_thinking_model = ui_config["llm_is_thinking_model"]
+        if "enable_demand_forecasting" in ui_config:
+            config.enable_demand_forecasting = ui_config["enable_demand_forecasting"]
+
         # Update Lead Time Config
         if "retailer_order_lead_time" in ui_config:
             config.simulation.retailer_lead_time = ui_config["retailer_order_lead_time"]
@@ -2063,9 +2031,9 @@ class StreamlitBeerGameApp:
             })
         elif demand_pattern == "Step Demand":
             config.update({
-                'initial_demand': local_vars.get('initial_demand', 1),
-                'step_demand': local_vars.get('step_demand', 1),
-                'step_week': local_vars.get('step_week', 15)
+                'initial_demand': local_vars.get('initial_demand', 4),
+                'step_demand': local_vars.get('step_demand', 8),
+                'step_week': local_vars.get('step_week', 5)
             })
         elif demand_pattern == "Seasonal Demand":
             config.update({
@@ -2261,10 +2229,12 @@ class StreamlitBeerGameApp:
                     st.error("Please provide Anthropic API Key")
                     return None, None
             elif config.llm.provider == "ollama":
-                client = OllamaClient(model_name=config.llm.model, base_url=config.llm.base_url)
+                client = OllamaClient(model_name=config.llm.model, base_url=config.llm.base_url,
+                                     timeout=config.llm.timeout)
                 llm_manager = LLMManager([client])
             elif config.llm.provider == "gpt_oss":
-                client = GPTOSSClient(model_name=config.llm.model, base_url=config.llm.base_url)
+                client = GPTOSSClient(model_name=config.llm.model, base_url=config.llm.base_url,
+                                     timeout=config.llm.timeout)
                 llm_manager = LLMManager([client])
             else:
                 llm_manager = LLMManager([MockLLMClient()])
@@ -2273,15 +2243,64 @@ class StreamlitBeerGameApp:
             agents = create_supply_chain(config, llm_client=llm_manager)
             
             # Based onConfigCreate Demand Pattern
+            dc = config.demand
+            ptype = dc.pattern_type.value
+
+            # Build distribution_params for distribution-based demand types
+            dist_params = {}
+            if ptype == 'normal':
+                dist_params = {'mean': dc.normal_mean, 'std': dc.normal_std}
+            elif ptype == 'poisson':
+                dist_params = {'lambda': dc.poisson_lambda}
+            elif ptype == 'exponential':
+                dist_params = {'lambda': dc.exponential_lambda, 'base': dc.exponential_base}
+            elif ptype == 'triangular':
+                dist_params = {'min': dc.triangular_min, 'max': dc.triangular_max, 'mode': dc.triangular_mode}
+            elif ptype == 'beta':
+                dist_params = {'alpha': dc.beta_alpha, 'beta': dc.beta_beta, 'scale': dc.beta_scale, 'shift': dc.beta_shift}
+            elif ptype == 'lognormal':
+                dist_params = {'mu': dc.lognormal_mu, 'sigma': dc.lognormal_sigma}
+            elif ptype == 'bimodal':
+                dist_params = {'mean1': dc.bimodal_mean1, 'std1': dc.bimodal_std1, 'mean2': dc.bimodal_mean2, 'std2': dc.bimodal_std2, 'weight': dc.bimodal_weight}
+            elif ptype == 'seasonal_random':
+                dist_params = {'base': dc.seasonal_random_base, 'amplitude': dc.seasonal_random_amplitude, 'period': dc.seasonal_random_period, 'noise_std': dc.seasonal_random_noise_std}
+            elif ptype == 'trend_cyclic':
+                dist_params = {'base': dc.trend_cyclic_base, 'slope': dc.trend_cyclic_slope, 'amplitude': dc.trend_cyclic_amplitude, 'period': dc.trend_cyclic_period}
+            elif ptype == 'multistage':
+                dist_params = {'stages': dc.multistage_stages}
+            elif ptype == 'markov':
+                dist_params = {'states': dc.markov_states, 'transition_matrix': dc.markov_transition_matrix, 'initial_state': dc.markov_initial_state}
+            elif ptype == 'promotion':
+                dist_params = {'base_demand': dc.promotion_base_demand, 'intensity': dc.promotion_intensity, 'start_week': dc.promotion_start_week, 'duration': dc.promotion_duration, 'decay_rate': dc.promotion_decay_rate}
+            elif ptype == 'competition':
+                dist_params = {'base_demand': dc.competition_base_demand, 'market_share': dc.competition_market_share, 'elasticity': dc.competition_elasticity, 'competitor_actions': dc.competition_competitor_actions}
+            elif ptype == 'diffusion':
+                dist_params = {'market_potential': dc.diffusion_market_potential, 'innovation_coeff': dc.diffusion_innovation_coeff, 'imitation_coeff': dc.diffusion_imitation_coeff}
+            elif ptype == 'inventory_sensitive':
+                dist_params = {'base_demand': dc.inventory_sensitive_base_demand, 'stockout_penalty': dc.inventory_sensitive_stockout_penalty, 'substitution_rate': dc.inventory_sensitive_substitution_rate}
+            elif ptype == 'autoregressive':
+                dist_params = {'base_demand': getattr(dc, 'ar_base_demand', dc.base_demand), 'ar_coeffs': getattr(dc, 'ar_coefficients', [0.7]), 'noise_std': getattr(dc, 'ar_noise_std', 2.0)}
+            elif ptype == 'arma':
+                dist_params = {'base_demand': getattr(dc, 'arma_base_demand', dc.base_demand), 'ar_coeffs': getattr(dc, 'arma_ar_coefficients', [0.5]), 'ma_coeffs': getattr(dc, 'arma_ma_coefficients', [0.3]), 'noise_std': getattr(dc, 'arma_noise_std', 2.0)}
+            elif ptype == 'jump_diffusion':
+                dist_params = {'base_demand': getattr(dc, 'jump_base_demand', dc.base_demand), 'drift': getattr(dc, 'jump_drift', 0.0), 'volatility': getattr(dc, 'jump_volatility', 0.2), 'jump_intensity': getattr(dc, 'jump_intensity', 0.1), 'jump_mean': getattr(dc, 'jump_mean', 0.0), 'jump_std': getattr(dc, 'jump_std', 0.5)}
+            elif ptype == 'poisson_jump':
+                dist_params = {'base_demand': getattr(dc, 'poisson_base_demand', dc.base_demand), 'jump_rate': getattr(dc, 'poisson_jump_rate', 0.2), 'jump_sizes': getattr(dc, 'poisson_jump_sizes', [-5, -2, 3, 8]), 'jump_probs': getattr(dc, 'poisson_jump_probs', [0.2, 0.3, 0.3, 0.2])}
+            elif ptype == 'regime_switching':
+                dist_params = {'regimes': getattr(dc, 'switching_regimes', [{'mean': 8, 'std': 2, 'name': 'low'}, {'mean': 15, 'std': 3, 'name': 'high'}]), 'transition_matrix': getattr(dc, 'switching_transition_matrix', [[0.9, 0.1], [0.15, 0.85]])}
+            elif ptype == 'volatility_clustering':
+                dist_params = {'base_demand': getattr(dc, 'volatility_base_demand', dc.base_demand), 'alpha': getattr(dc, 'volatility_alpha', 0.1), 'beta': getattr(dc, 'volatility_beta', 0.8), 'omega': getattr(dc, 'volatility_omega', 1.0)}
+
             demand_pattern = DemandPattern(
-                pattern_type=config.demand.pattern_type.value,
-                base_demand=config.demand.base_demand,
-                step_change=getattr(config.demand, 'step_demand', config.demand.base_demand) - config.demand.base_demand,
-                step_round=getattr(config.demand, 'step_week', 5),
-                seasonal_amplitude=getattr(config.demand, 'seasonal_amplitude', 0.0),
-                seasonal_period=getattr(config.demand, 'seasonal_period', 12),
-                random_min=getattr(config.demand, 'random_min', 1),
-                random_max=getattr(config.demand, 'random_max', 10)
+                pattern_type=ptype,
+                base_demand=dc.base_demand,
+                step_change=getattr(dc, 'step_demand', dc.base_demand) - dc.base_demand,
+                step_round=getattr(dc, 'step_week', 5),
+                seasonal_amplitude=getattr(dc, 'seasonal_amplitude', 0.0),
+                seasonal_period=getattr(dc, 'seasonal_period', 12),
+                random_min=getattr(dc, 'random_min', 1),
+                random_max=getattr(dc, 'random_max', 10),
+                distribution_params=dist_params,
             )
             
 
@@ -2688,7 +2707,7 @@ class StreamlitBeerGameApp:
             if cost_data:
                 fig_pie = go.Figure(data=[go.Pie(labels=cost_labels, values=cost_data)])
                 fig_pie.update_layout(title="Cost Breakdown Distribution")
-                st.plotly_chart(fig_pie, use_container_width=True)
+                st.plotly_chart(fig_pie, width='stretch')
         
         # Display Detailed Cost Table
         st.markdown("#### Cost Detailed Data Table")
@@ -2706,7 +2725,7 @@ class StreamlitBeerGameApp:
         # Create DataFrame and Display
         import pandas as pd
         df = pd.DataFrame(cost_table_data)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
         
         # Add Download Button
         csv = df.to_csv(index=False, encoding='utf-8-sig')
@@ -3152,7 +3171,7 @@ class StreamlitBeerGameApp:
                 fig.update_xaxes(title_text="Order Quantity", row=i, col=j)
                 fig.update_yaxes(title_text="Probability (%)", row=i, col=j)
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
         
         # Display Detailed Statistics Table
         st.markdown("#### 📋 Detailed Decision Statistics")
@@ -3171,7 +3190,7 @@ class StreamlitBeerGameApp:
         
         import pandas as pd
         df = pd.DataFrame(stats_df)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
         
         # DecisionRowforAnalysis
         st.markdown("#### 🔍 Decision Row for Analysis")
@@ -3273,7 +3292,7 @@ class StreamlitBeerGameApp:
             # DisplayFilterafterData
             st.dataframe(
                 filtered_df,
-                use_container_width=True,
+                width='stretch',
                 column_config={
                     'Period': st.column_config.NumberColumn('Period', width='small'),
                     'Participants': st.column_config.TextColumn('Participants', width='medium'),
@@ -3427,74 +3446,120 @@ class StreamlitBeerGameApp:
         # Render sidebar
         ui_config = self.render_sidebar()
         
-        # MainInterface
-        col1, col2 = st.columns([3, 1])
-        
-        with col2:
-            st.markdown("### Simulation Configuration")
-            
-            # Real-time 3D Display Toggle
-            enable_realtime_3d = st.checkbox(
-                "🏢 Enable Real-time 3D Display",
-                value=False,
-                help="In simulation run process, real-time display 3D Supply Chain Visualization"
-            )
-            
-            # Each Role Real-time Status Display Toggle
-            show_realtime_status = st.checkbox(
-                "📊 Display Each Role Real-time Status", 
-                value=False,
-                help="Display real-time status info such as inventory and orders of each role during simulation"
-            )
-            
+        # MainInterface — full-width controls + config preview
+        st.markdown("---")
+
+        # === Simulation Controls ===
+        btn_col1, btn_col2, btn_col3 = st.columns([1, 2, 1])
+        with btn_col2:
             run_button = st.button("🚀 Start Simulation", type="primary", width='stretch')
 
-            if st.button("📊 Load Example Result", width='stretch'):
-                st.session_state.show_example = True
-        
-        # HandleLoadExampleResult
-        if hasattr(st.session_state, 'show_example') and st.session_state.show_example:
-            self.show_example_results_loader()
-            return  # Display example result load interface, do not display other content
-        
-        with col1:
-            st.markdown("### Config Preview")
-            
-            # Demand Parameters Display
-            st.markdown("#### 📊 Demand Config")
-            demand_info_col1, demand_info_col2 = st.columns(2)
-            
-            with demand_info_col1:
-                st.metric("Demand Type", ui_config["demand_pattern"])
-                if ui_config["demand_pattern"] == "Random Demand":
-                    import math
-                    min_demand = ui_config["random_min"]
-                    max_demand = ui_config["random_max"]
-                    mean_demand = (min_demand + max_demand) / 2
-                    # Uniform DistributionActualVarianceandStd Dev
-                    actual_variance = ((max_demand - min_demand) ** 2) / 12
-                    actual_std = math.sqrt(actual_variance)
-                    st.metric("Mean", f"{mean_demand:.1f}")
-                    st.metric("ActualStd Dev", f"{actual_std:.2f}")
-                    st.metric("ActualVariance", f"{actual_variance:.2f}")
-            
-            with demand_info_col2:
-                if ui_config["demand_pattern"] == "Random Demand":
-                    st.metric("DistributionType", "Uniform Distribution")
-                    st.metric("DemandRange", f"[{min_demand}, {max_demand}]")
-                    st.metric("RangeSize", f"{max_demand - min_demand}")
-                    st.info(f"💡 Tip: Uniform Distribution Range [{min_demand}, {max_demand}] ActualStd Devfor {actual_std:.2f}")
-                elif ui_config["demand_pattern"] == "Step Demand":
-                    st.metric("Initial Demand", ui_config["initial_demand"])
-                    st.metric("Step Demand", ui_config["step_demand"])
-                    st.metric("Step Week", ui_config["step_week"])
-                elif ui_config["demand_pattern"] == "Seasonal Demand":
-                    st.metric("Base Demand", ui_config["base_demand"])
-                    st.metric("Seasonal Amplitude", ui_config["amplitude"])
-                    st.metric("Period Length", ui_config["period"])
-            
-            with st.expander("View Complete Config", expanded=False):
-                st.json(ui_config)
+        # Feature toggles — hardcoded off, removed from UI per user request
+        enable_realtime_3d = False
+        show_realtime_status = False
+
+        # Demand forecasting deduction mode (add-on checkbox)
+        enable_demand_forecasting = st.checkbox(
+            "🔮 Enable Supply Chain Demand Forecasting Deduction",
+            value=st.session_state.get("enable_demand_forecasting", False),
+            help="When checked, appends demand forecasting deduction rules to the end of original prompts without modifying any existing prompt text"
+        )
+        st.session_state.enable_demand_forecasting = enable_demand_forecasting
+
+        # === Config Preview ===
+        st.markdown("---")
+        st.markdown("### 📋 Config Preview")
+
+        demand_pattern = ui_config["demand_pattern"]
+
+        # --- Top-row summary cards ---
+        card_col1, card_col2, card_col3, card_col4 = st.columns(4)
+
+        demand_label = demand_pattern.replace(" Demand", "")
+        card_col1.markdown(f"""<div style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:16px 12px;border-radius:10px;text-align:center;">
+            <div style="font-size:12px;opacity:0.85;margin-bottom:4px;">📊 Demand Type</div>
+            <div style="font-size:18px;font-weight:bold;">{demand_label}</div></div>""", unsafe_allow_html=True)
+
+        card_col2.markdown(f"""<div style="background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff;padding:16px 12px;border-radius:10px;text-align:center;">
+            <div style="font-size:12px;opacity:0.85;margin-bottom:4px;">🔢 Rounds</div>
+            <div style="font-size:18px;font-weight:bold;">{ui_config['num_rounds']}</div></div>""", unsafe_allow_html=True)
+
+        card_col3.markdown(f"""<div style="background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff;padding:16px 12px;border-radius:10px;text-align:center;">
+            <div style="font-size:12px;opacity:0.85;margin-bottom:4px;">🎲 Random Seed</div>
+            <div style="font-size:18px;font-weight:bold;">{ui_config['random_seed']}</div></div>""", unsafe_allow_html=True)
+
+        info_sharing = "Yes" if ui_config.get('enable_info_sharing', False) else "No"
+        card_col4.markdown(f"""<div style="background:linear-gradient(135deg,#4facfe,#00f2fe);color:#fff;padding:16px 12px;border-radius:10px;text-align:center;">
+            <div style="font-size:12px;opacity:0.85;margin-bottom:4px;">🔄 Info Sharing</div>
+            <div style="font-size:18px;font-weight:bold;">{info_sharing}</div></div>""", unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # --- Demand parameters card ---
+        with st.container():
+            st.markdown("#### 📊 Demand Parameters")
+            dcol1, dcol2, dcol3 = st.columns(3)
+
+            if demand_pattern == "Step Demand":
+                with dcol1:
+                    st.metric("Initial Demand", ui_config.get("initial_demand", 4))
+                with dcol2:
+                    st.metric("Step Demand", ui_config.get("step_demand", 8))
+                with dcol3:
+                    st.metric("Step Week", ui_config.get("step_week", 5))
+                st.caption(f"Weeks 1–{ui_config.get('step_week', 5)-1}: demand = {ui_config.get('initial_demand', 4)} | "
+                          f"Weeks {ui_config.get('step_week', 5)}+: demand = {ui_config.get('step_demand', 8)}")
+            elif demand_pattern == "Constant Demand":
+                with dcol1:
+                    st.metric("Constant Demand", ui_config.get("constant_demand", 4))
+            elif demand_pattern == "Random Demand":
+                min_d = ui_config.get("random_min", 1)
+                max_d = ui_config.get("random_max", 10)
+                with dcol1:
+                    st.metric("Min Demand", min_d)
+                with dcol2:
+                    st.metric("Max Demand", max_d)
+                with dcol3:
+                    st.metric("Range", f"[{min_d}, {max_d}]")
+                st.caption(f"Uniform distribution — each value in [{min_d}, {max_d}] equally likely")
+            elif demand_pattern == "Seasonal Demand":
+                with dcol1:
+                    st.metric("Base Demand", ui_config.get("base_demand", 25))
+                with dcol2:
+                    st.metric("Amplitude", ui_config.get("amplitude", 10))
+                with dcol3:
+                    st.metric("Period", ui_config.get("period", 12))
+            elif demand_pattern == "Normal Distribution":
+                with dcol1:
+                    st.metric("Mean", ui_config.get("normal_mean", 10.0))
+                with dcol2:
+                    st.metric("Std Dev", ui_config.get("normal_std", 2.0))
+            elif demand_pattern == "Poisson Distribution":
+                with dcol1:
+                    st.metric("Lambda", ui_config.get("poisson_lambda", 8.0))
+            else:
+                with dcol1:
+                    st.metric("Type", demand_pattern)
+
+        # Agent config summary
+        with st.expander("🏭 Supply Chain Agent Configuration", expanded=False):
+            agent_cols = st.columns(4)
+            roles = [
+                ("retailer", "🏪 Retailer"),
+                ("wholesaler", "🏢 Wholesaler"),
+                ("distributor", "🚚 Distributor"),
+                ("manufacturer", "🏭 Manufacturer"),
+            ]
+            for i, (role_key, role_label) in enumerate(roles):
+                with agent_cols[i]:
+                    inv = ui_config.get(f"{role_key}_initial_inventory", 15)
+                    bl = ui_config.get(f"{role_key}_backlog", 0)
+                    st.markdown(f"**{role_label}**")
+                    st.caption(f"Initial Inventory: {inv}")
+                    st.caption(f"Initial Backorder: {bl}")
+
+        with st.expander("⚙️ View Full Config (JSON)", expanded=False):
+            st.json(ui_config)
         
         # Run Simulation
         if run_button:
@@ -3545,9 +3610,22 @@ class StreamlitBeerGameApp:
                     st.session_state.result = result
                     st.session_state.bullwhip_metrics = bullwhip_metrics
                     st.success("Simulation run completed!")
+
+                    # Auto-collapse sidebar after simulation to maximize results view
+                    st.components.v1.html("""
+                    <script>
+                    (function() {
+                        var sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+                        if (sidebar) {
+                            var btn = sidebar.querySelector('button[data-testid="stSidebarCollapsedControl"]');
+                            if (btn) btn.click();
+                        }
+                    })();
+                    </script>
+                    """, height=0)
         
         # DisplayResult
-        if hasattr(st.session_state, 'result') and st.session_state.result:
+        if st.session_state.get('result'):
             st.markdown("---")
             
             # Result Title and Save Button
@@ -3580,22 +3658,22 @@ class StreamlitBeerGameApp:
             self.display_summary_metrics(st.session_state.result, st.session_state.bullwhip_metrics)
             
             # ChartDisplay
-            tabs = ["🏢 3D Supply Chain", "📊 Inventory Level", "📈 Order & Demand", "🚚 Shipment Quantity", "💰 Cost Analysis", "🔄 Bullwhip Effect", "📊 Decision Statistics"]
-            
-            # IfEnableDoneDebug Features，AddDebug Tag
+            tabs = ["🏢 3D Supply Chain", "📊 Inventory & Orders", "🚚 Shipment & Pipeline", "💰 Cost Analysis", "🔄 Bullwhip & Decision Stats"]
+
+            # If debug features enabled, add debug tab
             if ui_config.get('enable_prompt_debug', False):
                 tabs.append("🔧 Prompt Adjust / Debug")
-            
-            tab_objects = st.tabs(tabs)
-            tab1, tab2, tab3, tab4, tab5, tab6, tab7 = tab_objects[:7]
 
-            # IfhasDebug Tag，Getit
-            debug_tab = tab_objects[7] if len(tab_objects) > 7 else None
-            
+            tab_objects = st.tabs(tabs)
+            tab1, tab2, tab3, tab4, tab5 = tab_objects[:5]
+
+            # Debug tab
+            debug_tab = tab_objects[5] if len(tab_objects) > 5 else None
+
             with tab1:
                 st.markdown("### 🏢 3D Supply Chain Dynamic Visualization")
                 st.markdown("""This is an interactive 3D supply chain visualization that displays the dynamic process of order flow, inventory changes, and in-transit goods arrival between each role.
-                
+
 **Feature Description:**
 - 🎮 **Play Control**: Use Play button to auto-play entire simulation process
 - 🎚️ **Round Slider**: Manual Select to View Specific Round Status
@@ -3609,13 +3687,11 @@ class StreamlitBeerGameApp:
 - 📊 **Real-time Info**: Top-right corner displays current round key metrics
 - 🏷️ **Chart Legend**: Bottom-left corner displays each role color markers
                 """)
-                
+
                 try:
-                    # Create3DVisualization
                     visualizer_3d = SupplyChain3DVisualizer()
                     visualizer_3d.render_in_streamlit(st.session_state.result, width=1200, height=700)
-                    
-                    # AddDownloadOption
+
                     st.markdown("---")
                     col1, col2 = st.columns(2)
                     with col1:
@@ -3624,10 +3700,10 @@ class StreamlitBeerGameApp:
                             output_path = f"supply_chain_3d_{timestamp}.html"
                             visualizer_3d.save_html(st.session_state.result, output_path)
                             st.success(f"✅ 3D visualization saved to: {output_path}")
-                    
+
                     with col2:
                         st.info("💡 Tip: Saved HTML files can be opened standalone in Browser, supporting full interactive features.")
-                        
+
                 except Exception as e:
                     st.error(f"❌ 3D visualization load failed: {str(e)}")
                     st.markdown("""**Possible Solutions:**
@@ -3635,60 +3711,58 @@ class StreamlitBeerGameApp:
                     2. Try refreshing the page
                     3. Check if Browser supports WebGL
                     """)
-            
+
             with tab2:
+                st.markdown("### 📊 Inventory Level")
                 fig = self.plot_inventory_levels(st.session_state.result)
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with tab3:
-                fig = self.plot_orders_and_demand(st.session_state.result)
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with tab4:
-                st.markdown("### 🚚 Shipment Quantity by Participant")
-                st.markdown("""This chart displays each stage's shipment quantity change trend, helping analyze each participant's shipment arrival capability and response mode.""")
-                
-                # UseBeerGameVisualizerplot_shipments_interactiveMethod
-                visualizer = BeerGameVisualizer()
-                fig = visualizer.plot_shipments_interactive(st.session_state.result)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
                 st.markdown("---")
-                st.markdown("### 🚢 In-Transit Inventory（Each Participants）")
+                st.markdown("### 📈 Order & Demand")
+                fig = self.plot_orders_and_demand(st.session_state.result)
+                st.plotly_chart(fig, width='stretch')
+
+            with tab3:
+                st.markdown("### 🚚 Shipment Quantity by Participant")
+                st.markdown("""This chart displays each stage's shipment quantity change trend, helping analyze each participant's shipment arrival capability and response mode.""")
+
+                visualizer = BeerGameVisualizer()
+                fig = visualizer.plot_shipments_interactive(st.session_state.result)
+                st.plotly_chart(fig, width='stretch')
+
+                st.markdown("---")
+                st.markdown("### 🚢 In-Transit Inventory (Each Participant)")
                 st.markdown("This chart displays each participant's in-transit inventory total amount per round, combined with next-period arrival info to help evaluate replenishment rhythm and supply chain response.")
                 fig_intransit = self.plot_in_transit_levels(st.session_state.result)
-                st.plotly_chart(fig_intransit, use_container_width=True)
-            
-            with tab5:
+                st.plotly_chart(fig_intransit, width='stretch')
+
+            with tab4:
                 fig = self.plot_costs(st.session_state.result)
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # DisplayDetailed Cost Analysis
+                st.plotly_chart(fig, width='stretch')
+
                 self.display_detailed_cost_analysis(st.session_state.result)
-                
-                # New Added:Per Round Total Cost（All ParticipantsCostSum）
+
                 st.markdown("---")
                 st.markdown("### 📊 Per Round Total Cost (Sum of All Participants' Costs)")
                 fig_total_per_round = self.plot_total_cost_per_round(st.session_state.result)
-                st.plotly_chart(fig_total_per_round, use_container_width=True)
-                
-                # New: Each Participant Cost Trend (Per Round Cost and Cumulative Cost)
+                st.plotly_chart(fig_total_per_round, width='stretch')
+
                 st.markdown("---")
                 st.markdown("### 📈 Each Participant Cost Trend (Per Round and Cumulative)")
                 fig_trends = self.plot_cost_trends(st.session_state.result)
-                st.plotly_chart(fig_trends, use_container_width=True)
-            
-            with tab6:
+                st.plotly_chart(fig_trends, width='stretch')
+
+            with tab5:
+                st.markdown("### 🔄 Bullwhip Effect")
                 fig = self.plot_bullwhip_effect(st.session_state.bullwhip_metrics)
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # New Added:Each ParticipantOrderTime SeriesandRollingCV
+                st.plotly_chart(fig, width='stretch')
+
                 st.markdown("---")
                 st.markdown("### 🌊 Bullwhip Effect Detailed Trend (Order and Rolling CV)")
                 fig_bw_ts = self.plot_bullwhip_timeseries(st.session_state.result, window=5)
-                st.plotly_chart(fig_bw_ts, use_container_width=True)
-            
-            with tab7:
+                st.plotly_chart(fig_bw_ts, width='stretch')
+
+                st.markdown("---")
                 self.display_decision_statistics(st.session_state.result)
             
             # Debug Panel
@@ -3716,7 +3790,7 @@ class StreamlitBeerGameApp:
                 for col in numeric_columns:
                     demand_data[col] = pd.to_numeric(demand_data[col], errors='coerce').fillna(0).astype(int)
                 
-                st.dataframe(demand_data, use_container_width=True)
+                st.dataframe(demand_data, width='stretch')
                 
                 # EachRoleDetailedOperationsData
                 roles = {
@@ -3753,7 +3827,7 @@ class StreamlitBeerGameApp:
                             for round_data in st.session_state.result.round_history
                             if role_key in round_data['agents']
                         ])
-                        st.dataframe(role_data, use_container_width=True)
+                        st.dataframe(role_data, width='stretch')
                         
                         # In-Transit Inventory Details
                         st.markdown(f"#### {role_name}{'Production In Progress Details' if role_key == 'manufacturer' else 'In-Transit Inventory Details'}")
@@ -3782,7 +3856,7 @@ class StreamlitBeerGameApp:
                         
                         if pipeline_data:
                             pipeline_df = pd.DataFrame(pipeline_data)
-                            st.dataframe(pipeline_df, use_container_width=True)
+                            st.dataframe(pipeline_df, width='stretch')
                         
                         # OrderFlowInfo
                         st.markdown(f"#### {role_name}OrderFlowInfo")
@@ -3808,7 +3882,7 @@ class StreamlitBeerGameApp:
                         
                         if order_flow_data:
                             order_flow_df = pd.DataFrame(order_flow_data)
-                            st.dataframe(order_flow_df, use_container_width=True)
+                            st.dataframe(order_flow_df, width='stretch')
                         
                         # DataDownloadFeature
                         csv = role_data.to_csv(index=False, encoding='utf-8-sig')

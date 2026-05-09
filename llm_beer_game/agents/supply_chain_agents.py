@@ -10,7 +10,8 @@ class RetailerAgent(LLMAgent):
                  llm_client: Any = None,
                  agent_id: str = "retailer"):
         super().__init__("retailer", config, llm_client, agent_id,
-                        temperature=0.3, max_tokens=2000)
+                        temperature=getattr(config.llm, 'temperature', 0.3) or 0.3,
+                        max_tokens=getattr(config.llm, 'max_tokens', 2000) or 2000)
 
     def _create_system_prompt(self) -> str:
         """Retailer-specific system prompt"""
@@ -19,6 +20,7 @@ class RetailerAgent(LLMAgent):
         min_qty = getattr(role_cfg, 'min_order_quantity', None)
         max_qty = getattr(role_cfg, 'max_order_quantity', None)
         zero_allowed = (min_qty is None or min_qty == 0)
+        is_thinking = getattr(self.config.llm, 'is_thinking_model', False)
         zero_desc = f"- Order constraint: orders to wholesaler must be non-negative integers (>=0); whether zero orders are allowed depends on system settings (currently {'allowed' if zero_allowed else 'not allowed'})"
         limits_desc = (
             f"- Order limits: minimum order quantity {min_qty if min_qty is not None else 'not set'}, maximum order quantity {max_qty if max_qty is not None else 'not set'}; must strictly comply with limit requirements"
@@ -100,7 +102,7 @@ INCORRECT examples (NEVER do this):
 "We need 5"
 "Based on current inventory, I suggest ordering 10 units"
 
-STRICT RULE: Output ONLY JSON format with decision and brief reason."""
+{"STRICT RULE: Output ONLY JSON format with decision and brief reason." if not is_thinking else "STRICT RULE: Your internal thinking is handled by the system. Output ONLY the JSON object in your final response."}"""
 
 
 class WholesalerAgent(LLMAgent):
@@ -111,7 +113,8 @@ class WholesalerAgent(LLMAgent):
                  llm_client: Any = None,
                  agent_id: str = "wholesaler"):
         super().__init__("wholesaler", config, llm_client, agent_id,
-                        temperature=0.3, max_tokens=2000)
+                        temperature=getattr(config.llm, 'temperature', 0.3) or 0.3,
+                        max_tokens=getattr(config.llm, 'max_tokens', 2000) or 2000)
 
     def _create_system_prompt(self) -> str:
         """Wholesaler-specific system prompt"""
@@ -120,6 +123,7 @@ class WholesalerAgent(LLMAgent):
         min_qty = getattr(role_cfg, 'min_order_quantity', None)
         max_qty = getattr(role_cfg, 'max_order_quantity', None)
         zero_allowed = (min_qty is None or min_qty == 0)
+        is_thinking = getattr(self.config.llm, 'is_thinking_model', False)
         zero_desc = f"- Order constraint: orders to distributor must be non-negative integers (>=0); whether zero orders are allowed depends on system settings (currently {'allowed' if zero_allowed else 'not allowed'})"
         limits_desc = (
             f"- Order limits: minimum order quantity {min_qty if min_qty is not None else 'not set'}, maximum order quantity {max_qty if max_qty is not None else 'not set'}; must strictly comply with limit requirements"
@@ -203,7 +207,7 @@ INCORRECT examples (NEVER do this):
 "We need 5"
 "Based on current inventory, I suggest ordering 10 units"
 
-STRICT RULE: Output ONLY JSON format with decision and brief reason."""
+{"STRICT RULE: Output ONLY JSON format with decision and brief reason." if not is_thinking else "STRICT RULE: Your internal thinking is handled by the system. Output ONLY the JSON object in your final response."}"""
 
 
 class DistributorAgent(LLMAgent):
@@ -214,7 +218,8 @@ class DistributorAgent(LLMAgent):
                  llm_client: Any = None,
                  agent_id: str = "distributor"):
         super().__init__("distributor", config, llm_client, agent_id,
-                        temperature=0.3, max_tokens=2000)
+                        temperature=getattr(config.llm, 'temperature', 0.3) or 0.3,
+                        max_tokens=getattr(config.llm, 'max_tokens', 2000) or 2000)
 
     def _create_system_prompt(self) -> str:
         """Distributor-specific system prompt"""
@@ -223,6 +228,7 @@ class DistributorAgent(LLMAgent):
         min_qty = getattr(role_cfg, 'min_order_quantity', None)
         max_qty = getattr(role_cfg, 'max_order_quantity', None)
         zero_allowed = (min_qty is None or min_qty == 0)
+        is_thinking = getattr(self.config.llm, 'is_thinking_model', False)
         zero_desc = f"- Order constraint: orders to manufacturer must be non-negative integers (>=0); whether zero orders are allowed depends on system settings (currently {'allowed' if zero_allowed else 'not allowed'})"
         limits_desc = (
             f"- Order limits: minimum order quantity {min_qty if min_qty is not None else 'not set'}, maximum order quantity {max_qty if max_qty is not None else 'not set'}; must strictly comply with limit requirements"
@@ -297,7 +303,7 @@ INCORRECT examples (NEVER do this):
 "We need 5"
 "Based on current inventory, I suggest ordering 10 units"
 
-STRICT RULE: Output ONLY JSON format with decision and brief reason."""
+{"STRICT RULE: Output ONLY JSON format with decision and brief reason." if not is_thinking else "STRICT RULE: Your internal thinking is handled by the system. Output ONLY the JSON object in your final response."}"""
 
 
 class ManufacturerAgent(LLMAgent):
@@ -308,7 +314,8 @@ class ManufacturerAgent(LLMAgent):
                  llm_client: Any = None,
                  agent_id: str = "manufacturer"):
         super().__init__("manufacturer", config, llm_client, agent_id,
-                        temperature=0.3, max_tokens=2000)
+                        temperature=getattr(config.llm, 'temperature', 0.3) or 0.3,
+                        max_tokens=getattr(config.llm, 'max_tokens', 2000) or 2000)
 
     def _create_system_prompt(self) -> str:
         """Manufacturer-specific system prompt"""
@@ -317,6 +324,7 @@ class ManufacturerAgent(LLMAgent):
         min_qty = getattr(role_cfg, 'min_order_quantity', None)
         max_qty = getattr(role_cfg, 'max_order_quantity', None)
         zero_allowed = (min_qty is None or min_qty == 0)
+        is_thinking = getattr(self.config.llm, 'is_thinking_model', False)
         zero_desc = f"- Production constraint: production quantity must be non-negative integers (>=0); whether zero production is allowed depends on system settings (currently {'allowed' if zero_allowed else 'not allowed'})"
         limits_desc = (
             f"- Production limits: minimum production quantity {min_qty if min_qty is not None else 'not set'}, maximum production quantity {max_qty if max_qty is not None else 'not set'}; must strictly comply with system limits"
@@ -392,7 +400,7 @@ INCORRECT examples (NEVER do this):
 "We need 5"
 "Based on current inventory, I suggest ordering 10 units"
 
-STRICT RULE: Output ONLY JSON format with decision and brief reason."""
+{"STRICT RULE: Output ONLY JSON format with decision and brief reason." if not is_thinking else "STRICT RULE: Your internal thinking is handled by the system. Output ONLY the JSON object in your final response."}"""
 
 
 

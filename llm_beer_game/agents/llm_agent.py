@@ -63,6 +63,7 @@ class LLMAgent(BaseAgent):
         holding = getattr(self.config, self.role).cost_config.holding_cost
         backorder = getattr(self.config, self.role).cost_config.backorder_cost
         ratio = backorder / holding
+        is_thinking = getattr(self.config.llm, 'is_thinking_model', False)
 
         # Role-specific strategic guidance
         role_guidance = {
@@ -145,7 +146,7 @@ You need to make an ordering decision based on current state information:
 CRITICAL REQUIREMENT - OUTPUT FORMAT:
 You must strictly follow these requirements:
 
-1. Output ONLY a single JSON object, without any other text, explanation, or reasoning process
+1. Output ONLY a single JSON object as your final response — no extra text before or after
 2. Use exact format: {{"order_decision": <number>, "reasoning": "<text>"}}
 3. "order_decision" must be a non-negative integer (0 or greater)
 4. "reasoning" must explain your decision concisely (50-150 characters), addressing:
@@ -165,9 +166,7 @@ Incorrect output examples (PROHIBITED):
 - With reasoning text: Based on analysis, {{"order_decision": 5, "reasoning": "need restock"}}
 
 Important reminders:
-- Do NOT output any reasoning process or thinking steps
-- Do NOT add any extra explanatory text
-- Output the JSON object directly, nothing else
+- {'Your internal thinking is handled by the system — put your decision reasoning ONLY into the JSON reasoning field. Output the JSON directly.' if is_thinking else 'Do NOT output any reasoning process or thinking steps — output the JSON object directly, nothing else.'}
 - Ensure the JSON format is complete and parseable
 - Your reasoning field should reference specific numbers from the data provided
         """
@@ -943,6 +942,21 @@ Important reminders:
 
             # Create prompts
             system_prompt = self._create_system_prompt()
+
+            # Append demand forecasting deduction fragment if enabled (add-on only)
+            if getattr(self.config, 'enable_demand_forecasting', False):
+                system_prompt += (
+                    "\n\n"
+                    "Enable Supply Chain Demand Forecasting Deduction Mode: "
+                    "First, clearly identify your role in the supply chain. "
+                    "Based on global behaviors and current state of all participants, "
+                    "actively predict downstream and full supply chain short-term and mid-term demand fluctuation trends. "
+                    "Must structurally record: demand forecast rationale, direction of change, affected nodes, and potential trajectories. "
+                    "Maintain a dedicated standalone block for forecast records, "
+                    "and iteratively revise predictions in each subsequent round. "
+                    "This is an add-on output only — do NOT alter the original response structure."
+                )
+
             user_prompt = self._create_user_prompt(context)
 
             # Debug log: LLM input (detailed)

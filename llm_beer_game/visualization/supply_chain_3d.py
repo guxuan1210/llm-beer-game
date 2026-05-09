@@ -107,8 +107,66 @@ class SupplyChain3DVisualizer:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Supply Chain Dynamic Visualization</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Three.js dynamic loader with multi-CDN fallback -->
+    <script>
+        (function() {{
+            var THREE_URLS = [
+                'https://unpkg.com/three@0.128.0/build/three.min.js',
+                'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
+            ];
+            var ORBIT_URLS = [
+                'https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js',
+                'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js'
+            ];
+            window._threeReady = false;
+            window._orbitReady = false;
+            window._initCalled = false;
+
+            function loadJs(urls, onAllFail) {{
+                var idx = 0;
+                function tryNext() {{
+                    if (idx >= urls.length) {{ onAllFail(); return; }}
+                    var s = document.createElement('script');
+                    s.src = urls[idx++];
+                    s.onload = function() {{ /* loaded */ }};
+                    s.onerror = tryNext;
+                    document.head.appendChild(s);
+                }}
+                tryNext();
+            }}
+
+            function checkReady() {{
+                if (window._initCalled) return;
+                if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls !== 'undefined') {{
+                    window._initCalled = true;
+                    var overlay = document.getElementById('loading-overlay');
+                    if (overlay) overlay.style.display = 'none';
+                    if (typeof window._bootScene === 'function') window._bootScene();
+                }} else if (typeof THREE !== 'undefined') {{
+                    setTimeout(checkReady, 100);
+                }}
+            }}
+
+            window._bootScene = null;
+
+            loadJs(THREE_URLS, function() {{
+                var overlay = document.getElementById('loading-overlay');
+                if (overlay) overlay.innerHTML = '<div style="color:#f44;font-size:18px;">&#10060; Failed to load 3D engine<br><small>Check network and refresh</small></div>';
+            }});
+
+            setTimeout(function() {{
+                loadJs(ORBIT_URLS, function() {{
+                    var overlay = document.getElementById('loading-overlay');
+                    if (overlay) overlay.innerHTML = '<div style="color:#f44;font-size:18px;">&#10060; Failed to load 3D controls<br><small>Check network and refresh</small></div>';
+                }});
+                var poll = setInterval(function() {{
+                    checkReady();
+                    if (window._initCalled) clearInterval(poll);
+                }}, 150);
+            }}, 50);
+        }})();
+    </script>
     <style>
         body {{
             margin: 0;
@@ -127,8 +185,37 @@ class SupplyChain3DVisualizer:
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }}
 
+        #loading-overlay {{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            padding: 30px 40px;
+            border-radius: 12px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }}
 
-        
+        #loading-overlay .spinner {{
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 15px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }}
+
+        @keyframes spin {{
+            to {{ transform: rotate(360deg); }}
+        }}
+
+
+
         #controls {{
             position: absolute;
             top: 10px;
@@ -305,6 +392,10 @@ class SupplyChain3DVisualizer:
 </head>
 <body>
     <div id="container">
+        <div id="loading-overlay">
+            <div class="spinner"></div>
+            Loading 3D engine...
+        </div>
 <div id="controls">
             <div class="panel-header" onclick="togglePanel('controls')">
                 <span><b>🎮 Controls</b></span>
@@ -1390,7 +1481,8 @@ class SupplyChain3DVisualizer:
         }});
         
         // Initialize scene
-        initScene();
+        // Defer initialization until Three.js + OrbitControls are loaded
+        window._bootScene = function() {{ initScene(); }};
 
     </script>
 </body>

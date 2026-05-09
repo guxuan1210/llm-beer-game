@@ -75,10 +75,21 @@ class OpenAIClient(LLMClient):
                     timeout=30  # Add timeout setting
                 )
 
+                # Log reasoning content if available (thinking models: DeepSeek R1, etc.)
+                reasoning = getattr(response.choices[0].message, 'reasoning_content', None)
+                if reasoning:
+                    print(f"[OpenAI] Reasoning/thinking content ({len(reasoning)} chars): '{reasoning[:300]}...'")
+                    # Save reasoning for debugging
+                    if not hasattr(self, '_last_reasoning'):
+                        self._last_reasoning = ""
+                    self._last_reasoning = reasoning
+
                 # Check response content
                 content = response.choices[0].message.content
                 print(f"[OpenAI] Raw response content: '{content}'")
                 print(f"[OpenAI] Is content None: {content is None}")
+                if content is None and reasoning:
+                    print(f"[OpenAI] content is None but reasoning exists — thinking model may have exhausted token budget")
 
                 if content is None:
                     print(f"[OpenAI] Response content is None, retrying {attempt + 1}/{max_retries}")
@@ -113,6 +124,7 @@ class AnthropicClient(LLMClient):
                  **kwargs):
         super().__init__(model_name, **kwargs)
         self.api_key = api_key
+        self._thinking_budget = None  # Set to int to enable extended thinking
 
         try:
             import anthropic
@@ -125,6 +137,14 @@ class AnthropicClient(LLMClient):
             self.logger.error(f"Failed to initialize Anthropic client: {e}")
             self._available = False
 
+    def enable_thinking(self, budget_tokens: int = 1600):
+        """Enable extended thinking for Claude models.
+
+        Args:
+            budget_tokens: Token budget for thinking (must be < max_tokens)
+        """
+        self._thinking_budget = budget_tokens
+
     def generate(self,
                 system_prompt: str,
                 user_prompt: str,
@@ -135,7 +155,12 @@ class AnthropicClient(LLMClient):
             raise RuntimeError("Anthropic client not available")
 
         try:
-            response = self.client.messages.create(
+            # Check if thinking is enabled via kwargs
+            thinking_config = None
+            if hasattr(self, '_thinking_budget') and self._thinking_budget:
+                thinking_config = {"type": "enabled", "budget_tokens": self._thinking_budget}
+
+            kwargs = dict(
                 model=self.model_name,
                 system=system_prompt,
                 messages=[
@@ -144,8 +169,19 @@ class AnthropicClient(LLMClient):
                 temperature=temperature,
                 max_tokens=max_tokens
             )
+            if thinking_config:
+                kwargs["thinking"] = thinking_config
 
-            return response.content[0].text.strip()
+            response = self.client.messages.create(**kwargs)
+
+            # Handle different content block types (thinking vs text)
+            for block in response.content:
+                if block.type == "text":
+                    return block.text.strip()
+            # Fallback: try first block if no text block found
+            if response.content:
+                return str(response.content[0]).strip()
+            return ""
 
         except Exception as e:
             self.logger.error(f"Anthropic API call failed: {e}")

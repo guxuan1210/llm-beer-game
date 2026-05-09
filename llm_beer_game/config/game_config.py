@@ -96,7 +96,7 @@ class AgentConfig:
 class DemandConfig:
     """Demand configuration"""
     pattern_type: DemandPatternType = DemandPatternType.STEP
-    base_demand: int = 1
+    base_demand: int = 4
 
     # Step demand parameters
     step_week: int = 5
@@ -214,6 +214,7 @@ class LLMConfig:
     max_tokens: int = 150
     timeout: int = 30
     max_retries: int = 3
+    is_thinking_model: bool = False  # Whether model has built-in thinking/reasoning (R1, o1, etc.)
 
     # Fallback configurations
     fallback_configs: List[Dict[str, Any]] = field(default_factory=list)
@@ -233,6 +234,7 @@ class LLMProviderPreset:
     default_max_tokens: int = 150
     default_timeout: int = 30
     provider_label: str = ""                     # Short label for the provider
+    is_thinking_model: bool = False              # Whether model has built-in thinking/reasoning (R1, o1, etc.)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -247,6 +249,7 @@ class LLMProviderPreset:
             "default_max_tokens": self.default_max_tokens,
             "default_timeout": self.default_timeout,
             "provider_label": self.provider_label,
+            "is_thinking_model": self.is_thinking_model,
         }
 
     @classmethod
@@ -263,6 +266,7 @@ class LLMProviderPreset:
             default_max_tokens=data.get("default_max_tokens", 150),
             default_timeout=data.get("default_timeout", 30),
             provider_label=data.get("provider_label", ""),
+            is_thinking_model=data.get("is_thinking_model", False),
         )
 
 
@@ -335,11 +339,12 @@ BUILTIN_LLM_PRESETS: Dict[str, LLMProviderPreset] = {
         provider="deepseek",
         model="deepseek-reasoner",
         base_url="https://api.deepseek.com",
-        description="DeepSeek R1 reasoning model with chain-of-thought",
+        description="DeepSeek R1 reasoning model with chain-of-thought thinking",
         provider_label="DeepSeek",
         default_temperature=0.3,
-        default_max_tokens=200,
-        default_timeout=60,
+        default_max_tokens=8000,
+        default_timeout=120,
+        is_thinking_model=True,
     ),
 
     # === Zhipu GLM ===
@@ -554,6 +559,9 @@ class GameConfig:
 
     # Adaptive order limit configuration
     adaptive_limits: AdaptiveLimitsConfig = field(default_factory=AdaptiveLimitsConfig)
+
+    # Demand forecasting deduction mode (add-on, does not modify original prompts)
+    enable_demand_forecasting: bool = False
 
     # Metadata
     name: str = "Default Config"
