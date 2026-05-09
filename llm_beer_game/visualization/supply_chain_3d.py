@@ -159,7 +159,7 @@ class SupplyChain3DVisualizer:
             box-shadow: 0 3px 10px rgba(0,0,0,0.2);
             min-width: 180px;
             max-width: 230px;
-            max-height: 80vh;
+            max-height: calc(100% - 20px);
             overflow-y: auto;
             font-size: 11px;
         }}
@@ -437,8 +437,7 @@ class SupplyChain3DVisualizer:
                 </div>
             </div>
             </div>
-        </div>
-        
+
         <div class="legend">
             <div class="panel-header" onclick="togglePanel('legend')" style="margin-bottom:4px;">
                 <span><b>🏢 Roles</b></span>
