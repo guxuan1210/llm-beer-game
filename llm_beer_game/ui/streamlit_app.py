@@ -1954,7 +1954,9 @@ class StreamlitBeerGameApp:
             role_config = getattr(config, role)
             role_config.no_decision_constraints = ui_config.get(f"{role}_no_constraints", False)
             if role_config.no_decision_constraints:
-                print(f"🚫 {role}: No Decision Constraints — limit language removed from prompts")
+                role_config.min_order_quantity = 0
+                role_config.max_order_quantity = 1000
+                print(f"🚫 {role}: No Decision Constraints — limit language removed from prompts, range set to [0, 1000]")
 
         # Add adjust/debug info: display final config status
         print(f"\n🔧 Final Config Status:")

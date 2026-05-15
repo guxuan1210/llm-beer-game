@@ -909,6 +909,15 @@ Before outputting your JSON decision, verify each item:
         """Apply order quantity limits"""
         agent_config = getattr(self.config, self.role)
         original_quantity = order_quantity
+        no_constraints = getattr(agent_config, 'no_decision_constraints', False)
+
+        # When no_decision_constraints is True, use wide safety bounds [0, 1000]
+        # instead of the configured min/max (which may still be the defaults 3/8).
+        if no_constraints:
+            order_quantity = max(0, min(1000, order_quantity))
+            if original_quantity != order_quantity:
+                print(f"DEBUG: No-constraint role clamped to [0, 1000]: original={original_quantity}, adjusted={order_quantity}")
+            return order_quantity
 
         # Discrete point selection logic
         if (hasattr(agent_config, 'enable_discrete_points') and
