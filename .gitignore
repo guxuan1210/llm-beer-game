@@ -1,0 +1,74 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Claude Code
+.claude/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment
+.env
+.venv
+
+# pytest
+.pytest_cache/
+htmlcov/
+.coverage
+
+# mypy
+.mypy_cache/
+
+# Logs
+*.log
+
+# Simulation output
+results/
+demo_comparison/
+
+# Cache / model files
+*.pkl
+*.joblib
+
+# Generated HTML
+supply_chain_3d_*.html
+
+# pyenv
+.python-version

@@ -1,0 +1,76 @@
+{
+  "name": "DeepSeek Chat (V3)",
+  "description": "Beer game using DeepSeek V3 chat model with OpenAI-compatible API",
+  "version": "1.0",
+  "retailer": {
+    "agent_type": "llm",
+    "initial_inventory": 12,
+    "initial_backorder": 0,
+    "cost_config": { "holding_cost": 0.5, "backorder_cost": 1.0, "order_cost": 0.0 },
+    "llm_model": "deepseek-chat",
+    "temperature": 0.3,
+    "max_tokens": 150
+  },
+  "wholesaler": {
+    "agent_type": "llm",
+    "initial_inventory": 12,
+    "initial_backorder": 0,
+    "cost_config": { "holding_cost": 0.5, "backorder_cost": 1.0, "order_cost": 0.0 },
+    "llm_model": "deepseek-chat",
+    "temperature": 0.3,
+    "max_tokens": 150
+  },
+  "distributor": {
+    "agent_type": "llm",
+    "initial_inventory": 12,
+    "initial_backorder": 0,
+    "cost_config": { "holding_cost": 0.5, "backorder_cost": 1.0, "order_cost": 0.0 },
+    "llm_model": "deepseek-chat",
+    "temperature": 0.3,
+    "max_tokens": 150
+  },
+  "manufacturer": {
+    "agent_type": "llm",
+    "initial_inventory": 12,
+    "initial_backorder": 0,
+    "cost_config": { "holding_cost": 0.5, "backorder_cost": 1.0, "order_cost": 0.0 },
+    "llm_model": "deepseek-chat",
+    "temperature": 0.3,
+    "max_tokens": 150
+  },
+  "demand": {
+    "pattern_type": "step",
+    "base_demand": 1,
+    "step_week": 5,
+    "step_demand": 8,
+    "step_duration": 4,
+    "random_min": 1,
+    "random_max": 10,
+    "seasonal_amplitude": 2.0,
+    "seasonal_period": 12,
+    "custom_demands": []
+  },
+  "llm": {
+    "provider": "deepseek",
+    "model": "deepseek-chat",
+    "api_key": null,
+    "base_url": "https://api.deepseek.com",
+    "temperature": 0.3,
+    "max_tokens": 150,
+    "timeout": 30,
+    "max_retries": 3,
+    "fallback_configs": [
+      { "provider": "mock", "model": "mock-llm", "temperature": 0.3, "max_tokens": 150 }
+    ]
+  },
+  "simulation": {
+    "total_weeks": 50,
+    "lead_time": 2,
+    "information_sharing": false,
+    "retailer_lead_time": 2,
+    "wholesaler_lead_time": 2,
+    "distributor_lead_time": 2,
+    "manufacturer_lead_time": 2,
+    "random_seed": null
+  }
+}

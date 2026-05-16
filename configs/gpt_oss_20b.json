@@ -1,0 +1,116 @@
+{
+  "name": "GPT-OSS 20B Local Model",
+  "description": "Beer game simulation using locally deployed GPT-OSS 20B model",
+  "version": "1.0",
+  "retailer": {
+    "agent_type": "llm",
+    "initial_inventory": 12,
+    "initial_backorder": 0,
+    "cost_config": {
+      "holding_cost": 0.5,
+      "backorder_cost": 1.0,
+      "order_cost": 0.0
+    },
+    "min_order_quantity": null,
+    "max_order_quantity": null,
+    "base_stock_level": null,
+    "ma_window": null,
+    "llm_model": "gpt-oss:20b",
+    "temperature": 0.3,
+    "max_tokens": 50
+  },
+  "wholesaler": {
+    "agent_type": "llm",
+    "initial_inventory": 12,
+    "initial_backorder": 0,
+    "cost_config": {
+      "holding_cost": 0.5,
+      "backorder_cost": 1.0,
+      "order_cost": 0.0
+    },
+    "min_order_quantity": null,
+    "max_order_quantity": null,
+    "base_stock_level": null,
+    "ma_window": null,
+    "llm_model": "gpt-oss:20b",
+    "temperature": 0.3,
+    "max_tokens": 50
+  },
+  "distributor": {
+    "agent_type": "llm",
+    "initial_inventory": 12,
+    "initial_backorder": 0,
+    "cost_config": {
+      "holding_cost": 0.5,
+      "backorder_cost": 1.0,
+      "order_cost": 0.0
+    },
+    "min_order_quantity": null,
+    "max_order_quantity": null,
+    "base_stock_level": null,
+    "ma_window": null,
+    "llm_model": "gpt-oss:20b",
+    "temperature": 0.3,
+    "max_tokens": 50
+  },
+  "manufacturer": {
+    "agent_type": "llm",
+    "initial_inventory": 12,
+    "initial_backorder": 0,
+    "cost_config": {
+      "holding_cost": 0.5,
+      "backorder_cost": 1.0,
+      "order_cost": 0.0
+    },
+    "min_order_quantity": null,
+    "max_order_quantity": null,
+    "base_stock_level": null,
+    "ma_window": null,
+    "llm_model": "gpt-oss:20b",
+    "temperature": 0.3,
+    "max_tokens": 50
+  },
+  "demand": {
+    "pattern_type": "step",
+    "base_demand": 1,
+    "step_week": 5,
+    "step_demand": 8,
+    "step_duration": 4,
+    "random_min": 1,
+    "random_max": 10,
+    "random_seed": null,
+    "seasonal_amplitude": 2.0,
+    "seasonal_period": 12,
+    "custom_demands": []
+  },
+  "llm": {
+    "provider": "gpt_oss",
+    "model": "gpt-oss:20b",
+    "api_key": "ollama",
+    "base_url": "http://localhost:11434/v1",
+    "temperature": 0.3,
+    "max_tokens": 50,
+    "timeout": 30,
+    "max_retries": 3,
+    "fallback_configs": [
+      {
+        "provider": "mock",
+        "model": "mock-llm",
+        "temperature": 0.3,
+        "max_tokens": 50
+      }
+    ]
+  },
+  "simulation": {
+    "total_weeks": 50,
+    "lead_time": 2,
+    "information_sharing": false,
+    "shared_demand_history": false,
+    "shared_inventory_levels": false,
+    "retailer_lead_time": 2,
+    "wholesaler_lead_time": 2,
+    "distributor_lead_time": 2,
+    "manufacturer_lead_time": 2,
+    "random_seed": null
+  }
+}
