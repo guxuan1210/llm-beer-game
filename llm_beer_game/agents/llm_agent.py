@@ -147,23 +147,23 @@ CRITICAL REQUIREMENT - OUTPUT FORMAT:
 You must strictly follow these requirements:
 
 1. Output ONLY a single JSON object as your final response — no extra text before or after
-2. Use exact format: {{"order_decision": <number>, "reasoning": "<text>"}}
-3. "order_decision" must be a non-negative integer (0 or greater)
-4. "reasoning" must explain your decision concisely (50-150 characters), addressing:
+2. Use exact format: {{"decision": <number>, "reason": "<text>"}}
+3. "decision" must be a non-negative integer (0 or greater)
+4. "reason" must explain your decision concisely (50-150 characters), addressing:
    - Current net inventory position (short-term)
    - Supply-demand balance over lead time (long-term)
    - Why this order quantity is appropriate
 
 Correct output examples:
-{{"order_decision": 5, "reasoning": "ST: net +3, current period OK. LT: coverage 0.8 (<1.0), pipeline too thin — need to rebuild pipeline. Order slightly above demand to restore balance."}}
-{{"order_decision": 0, "reasoning": "ST: net +12, ample inventory. LT: coverage 1.5 (>1.5), oversupplied — skip order to let pipeline drain and reduce holding costs."}}
-{{"order_decision": 8, "reasoning": "ST: net -2, immediate shortage — must cover backorder now. LT: coverage 0.6 (<1.0), urgent replenishment needed. Order covers demand plus backorder recovery."}}
+{{"decision": 5, "reason": "ST: net +3, current period OK. LT: coverage 0.8 (<1.0), pipeline too thin — need to rebuild pipeline. Order slightly above demand to restore balance."}}
+{{"decision": 0, "reason": "ST: net +12, ample inventory. LT: coverage 1.5 (>1.5), oversupplied — skip order to let pipeline drain and reduce holding costs."}}
+{{"decision": 8, "reason": "ST: net -2, immediate shortage — must cover backorder now. LT: coverage 0.6 (<1.0), urgent replenishment needed. Order covers demand plus backorder recovery."}}
 
 Incorrect output examples (PROHIBITED):
 - Plain number: 5
 - With explanation: I suggest ordering 5 units, because...
-- Wrong format: {{"decision": 5}}
-- With reasoning text: Based on analysis, {{"order_decision": 5, "reasoning": "need restock"}}
+- Wrong format: {{"order_decision": 5}}
+- With reasoning text: Based on analysis, {{"decision": 5, "reason": "need restock"}}
 
 Important reminders:
 - {'Your internal thinking is handled by the system — put your decision reasoning ONLY into the JSON reasoning field. Output the JSON directly.' if is_thinking else 'Do NOT output any reasoning process or thinking steps — output the JSON object directly, nothing else.'}

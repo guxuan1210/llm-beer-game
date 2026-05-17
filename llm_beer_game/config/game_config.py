@@ -738,7 +738,7 @@ class ConfigManager:
                 return data
             
             result = {}
-            for field_name, field_def in target_class.__dataclass_fields__.items:
+            for field_name, field_def in target_class.__dataclass_fields__.items():
                 if field_name not in data:
                     continue
                 

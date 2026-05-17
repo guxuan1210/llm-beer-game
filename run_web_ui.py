@@ -29,10 +29,10 @@ def main():
         # Launch streamlit app
         streamlit_script = project_root / "llm_beer_game" / "ui" / "streamlit_app.py"
 
-        print("🍺 Launching LLM Beer Game Web UI...")
-        print(f"📁 Script path: {streamlit_script}")
-        print(f"🌐 Web UI will launch on port {args.port}")
-        print("⏹️  Press Ctrl+C to stop")
+        print("Launching LLM Beer Game Web UI...")
+        print(f"Script path: {streamlit_script}")
+        print(f"Web UI will launch on port {args.port}")
+        print("Press Ctrl+C to stop")
         print("-" * 50)
 
         # Run streamlit
@@ -45,13 +45,13 @@ def main():
         ])
 
     except ImportError:
-        print("❌ Error: streamlit not installed")
-        print("📦 Run: pip install streamlit")
+        print("Error: streamlit not installed")
+        print("Run: pip install streamlit")
         sys.exit(1)
     except KeyboardInterrupt:
-        print("\n👋 Web UI stopped")
+        print("\nWeb UI stopped")
     except Exception as e:
-        print(f"❌ Launch failed: {e}")
+        print(f"Launch failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

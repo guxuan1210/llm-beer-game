@@ -156,8 +156,8 @@ class GameEngine:
                 demand = max(0, int(pattern.base_demand * seasonal_factor))
 
             elif pattern.pattern_type == 'custom':
-                if round_num < len(pattern.custom_demands):
-                    demand = pattern.custom_demands[round_num]
+                if round_num <= len(pattern.custom_demands):
+                    demand = pattern.custom_demands[round_num - 1]
                 else:
                     demand = pattern.base_demand
 
@@ -906,7 +906,6 @@ class GameEngine:
         print(f"📋 Simulation Configuration:")
         print(f"   Rounds: {rounds}")
         # Keep global print, also add per-role printing for verification
-        print(f"   Global lead time (legacy): {self.config.simulation.lead_time}")
         # Print effective lead time components per role
         for role in self.supply_chain_order:
             agent = self.agents[role]
@@ -1087,7 +1086,7 @@ class GameEngine:
             return {
                 'coefficient_of_variation': cv_ratios,
                 'bullwhip_ratios': bullwhip_ratios,
-                'overall_bullwhip': float(max(bullwhip_ratios.values())) if bullwhip_ratios else 1.0
+                'overall_bullwhip': float(bullwhip_ratios.get('manufacturer_vs_retailer', 1.0)) if bullwhip_ratios else 1.0
             }
 
         except ImportError:
@@ -1145,11 +1144,12 @@ class GameEngine:
                         'information_sharing': result.config.simulation.information_sharing
                     },
                     'agents': {
-                        'retailer': {
-                            'initial_inventory': result.config.retailer.initial_inventory,
-                            'holding_cost': result.config.retailer.cost_config.holding_cost,
-                            'backorder_cost': result.config.retailer.cost_config.backorder_cost
+                        role: {
+                            'initial_inventory': getattr(result.config, role).initial_inventory,
+                            'holding_cost': getattr(result.config, role).cost_config.holding_cost,
+                            'backorder_cost': getattr(result.config, role).cost_config.backorder_cost
                         }
+                        for role in ['retailer', 'wholesaler', 'distributor', 'manufacturer']
                     },
                     'agents_lead_times': agents_lead_times
                 },

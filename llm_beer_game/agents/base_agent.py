@@ -14,7 +14,7 @@ from config.game_config import GameConfig, AgentConfig
 class AgentState:
     """Agent state"""
     inventory: int = 6  # Current inventory
-    incoming_shipment: int = 6  # Incoming shipment
+    incoming_shipment: int = 0  # Incoming shipment
     backorder: int = 0  # Backorders
     total_cost: float = 0.0  # Total cost
     round_cost: float = 0.0  # Current round cost
@@ -86,7 +86,6 @@ class BaseAgent(ABC):
                 self.shipment_pipeline = [min_order] * self.lead_time
             else:
                 self.shipment_pipeline = [0] * self.lead_time
-        self.order_pipeline: List[int] = [0] * self.lead_time
         self.current_round = 1
         self.current_demand = 0
         self.current_order = 0
@@ -130,7 +129,6 @@ class BaseAgent(ABC):
                 self.shipment_pipeline = [min_order] * self.lead_time
             else:
                 self.shipment_pipeline = [0] * self.lead_time
-        self.order_pipeline = [0] * self.lead_time
         self.current_round = 1
         self.current_demand = 0
         self.current_order = 0

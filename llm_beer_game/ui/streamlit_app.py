@@ -103,23 +103,23 @@ class StreamlitBeerGameApp:
     
     def __init__(self):
         self.config_manager = ConfigManager()
-        # Unified color config — muted academic palette
+        # Unified color config — modern data-viz palette
         self.role_colors = {
-            'retailer': '#DC5C5C',
-            'wholesaler': '#3BA99E',
-            'distributor': '#3A8FB5',
-            'manufacturer': '#7BAF95'
+            'retailer': '#EF4444',
+            'wholesaler': '#10B981',
+            'distributor': '#3B82F6',
+            'manufacturer': '#F59E0B'
         }
         # Inventory status color config — three-state color standard
         self.inventory_status_colors = {
-            'positive': '#2563EB',   # Blue — sufficient inventory
-            'zero': '#D97706',       # Amber — no stock
-            'negative': '#DC2626'    # Red — backorder
+            'positive': '#22C55E',   # Green — sufficient inventory
+            'zero': '#F59E0B',       # Amber — no stock
+            'negative': '#EF4444'    # Red — backorder
         }
         # Other status color config
         self.status_colors = {
-            'shortage': '#DC2626',   # Red — shortage
-            'empty': '#D97706',      # Amber — no stock
+            'shortage': '#EF4444',   # Red — shortage
+            'empty': '#F59E0B',      # Amber — no stock
             'demand': '#F59E0B'      # Amber — demand line
         }
         self.setup_page_config()
@@ -127,37 +127,41 @@ class StreamlitBeerGameApp:
     def setup_page_config(self):
         """Setup page config"""
         st.set_page_config(
-            page_title="LLM Beer Game Simulation System",
-            page_icon="🍺",
-            layout="wide",
-            initial_sidebar_state="expanded"
+            page_title="LLM Beer Game — Supply Chain Sim",
+            page_icon="S",
+            layout="wide"
         )
 
     def _inject_global_styles(self):
-        """Inject centralized academic CSS styles"""
+        """Inject centralized CSS styles"""
         st.markdown("""
         <style>
         /* === Sidebar === */
         [data-testid="stSidebar"] {
-            background-color: #F1F5F9;
+            background-color: #F8FAFC;
             border-right: 1px solid #E2E8F0;
         }
 
         /* === Typography === */
-        h1 { font-size: 1.75rem; font-weight: 700; color: #1E293B; letter-spacing: -0.01em; }
+        h1 { font-size: 1.75rem; font-weight: 700; color: #0F172A; letter-spacing: -0.01em; }
         h2 { font-size: 1.35rem; font-weight: 600; color: #1E293B; }
         h3 { font-size: 1.15rem; font-weight: 600; color: #334155; }
         h4 { font-size: 1rem; font-weight: 500; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
 
-        /* === Academic Metric Card === */
+        /* === Metric Card === */
         .metric-card {
             background: #FFFFFF;
             border: 1px solid #E2E8F0;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 18px 16px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
             text-align: center;
             margin: 4px 0;
+            transition: border-color 200ms ease, box-shadow 200ms ease;
+        }
+        .metric-card:hover {
+            border-color: #CBD5E1;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
         .metric-card .label {
             font-size: 0.7rem;
@@ -169,18 +173,18 @@ class StreamlitBeerGameApp:
         .metric-card .value {
             font-size: 1.4rem;
             font-weight: 700;
-            color: #1E293B;
+            color: #0F172A;
         }
 
         /* === Left-Accent Card === */
         .accent-card {
             background: #FFFFFF;
             border: 1px solid #E2E8F0;
-            border-left: 4px solid #1B3A5C;
-            border-radius: 0 6px 6px 0;
+            border-left: 4px solid #2563EB;
+            border-radius: 0 8px 8px 0;
             padding: 14px 18px;
             margin: 10px 0;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
 
         /* === Section Divider === */
@@ -194,26 +198,30 @@ class StreamlitBeerGameApp:
         .progress-header {
             font-size: 1.1rem;
             font-weight: 600;
-            color: #1B3A5C;
+            color: #2563EB;
             margin-bottom: 8px;
         }
         .sim-info-card {
             background: #FFFFFF;
             border: 1px solid #E2E8F0;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 16px 20px;
             margin: 10px 0;
         }
 
         /* === Primary Button === */
         .stButton > button[kind="primary"] {
-            background-color: #1B3A5C;
-            border: 1px solid #1B3A5C;
+            background-color: #2563EB;
+            border: 1px solid #2563EB;
             color: #FFFFFF;
         }
         .stButton > button[kind="primary"]:hover {
-            background-color: #0F2847;
-            border-color: #0F2847;
+            background-color: #1D4ED8;
+            border-color: #1D4ED8;
+        }
+        .stButton > button {
+            border-radius: 6px;
+            transition: all 150ms ease;
         }
 
         /* === Expander Headers === */
@@ -222,33 +230,52 @@ class StreamlitBeerGameApp:
             color: #334155;
             font-size: 0.9rem;
         }
+        .streamlit-expanderHeader:hover {
+            color: #0F172A;
+        }
 
         /* === Metric Widgets === */
         [data-testid="stMetricValue"] {
             font-weight: 600;
-            color: #1E293B;
+            color: #0F172A;
         }
         [data-testid="stMetricLabel"] {
             color: #64748B;
         }
 
-        /* === Sidebar Radio Buttons === */
-        [data-testid="stSidebar"] .stRadio label {
-            color: #334155;
+        /* === Scrollbar === */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+
+        /* === DataFrames === */
+        [data-testid="stDataFrame"] {
+            border: 1px solid #E2E8F0;
+            border-radius: 6px;
         }
         </style>
         """, unsafe_allow_html=True)
 
     def render_sidebar(self) -> Dict[str, Any]:
         """Render sidebar parameter configuration"""
-        st.sidebar.title("🍺 Simulation Parameter Configuration")
+        st.sidebar.title("Simulation Configuration")
         
         # Basic Settings
         st.sidebar.header("Basic Settings")
         config_type = "Default Config"
         
         # Debug Features Toggle
-        with st.sidebar.expander("🔧 Debug Features", expanded=False):
+        with st.sidebar.expander("Debug Features", expanded=False):
             enable_prompt_debug = st.checkbox(
                 "Enable Prompt Debugging",
                 value=False,
@@ -285,7 +312,7 @@ class StreamlitBeerGameApp:
         )
         
         # Demand Pattern (Zoom Out Display)
-        with st.sidebar.expander("📊 Demand Pattern", expanded=False):
+        with st.sidebar.expander("Demand Pattern", expanded=False):
             # Demand Category Selection
             demand_category = st.selectbox(
                 "Demand Category",
@@ -466,13 +493,13 @@ class StreamlitBeerGameApp:
                 st.caption("Model: σ²_t = ω + α*ε²_{t-1} + β*σ²_{t-1}")
             
             # Demand Preview and Validation Feature
-            st.subheader("📊 Demand Preview")
+            st.subheader("Demand Preview")
             
             # Preview Parameters
             preview_weeks = st.slider("Preview Weeks", 10, 100, 50, 5)
             preview_seed = st.number_input("Preview Random Seed", 0, 9999, 42)
             
-            if st.button("🔍 Generate Demand Preview", help="Based on current config, generates a demand preview chart"):
+            if st.button("Generate Demand Preview", help="Based on current config, generates a demand preview chart"):
                 try:
                     # Create Demand Pattern Object for Preview
                     from simulation.game_engine import DemandPattern, GameEngine
@@ -568,11 +595,11 @@ class StreamlitBeerGameApp:
                     
                     # Volatile Demand Pattern - Special Statistics Metrics
                     if demand_category == "Unstable Demand":
-                        st.subheader("📊 Unstable Demand Characteristic Analysis")
+                        st.subheader("Unstable Demand Characteristic Analysis")
                         self._show_unstable_demand_analysis(demand_pattern, preview_demands)
                     
                     # Demand Validation
-                    st.subheader("✅ Demand Validation")
+                    st.subheader("Demand Validation")
                     
                     # Basic Validation
                     validation_results = []
@@ -580,18 +607,18 @@ class StreamlitBeerGameApp:
                     # Check if Demand values are negative
                     negative_demands = [d for d in preview_demands if d < 0]
                     if negative_demands:
-                        validation_results.append(("❌", "Found Negative Demand Values", f"Found {len(negative_demands)} negative Demand values"))
+                        validation_results.append(("[FAIL]", "Found Negative Demand Values", f"Found {len(negative_demands)} negative Demand values"))
                     else:
-                        validation_results.append(("✅", "Demand Value Check", "All Demand Values are non-negative"))
+                        validation_results.append(("[OK]", "Demand Value Check", "All Demand Values are non-negative"))
                     
                     # Check Demand Variability
                     cv = np.std(preview_demands) / np.mean(preview_demands) if np.mean(preview_demands) > 0 else 0
                     if cv > 1.0:
-                        validation_results.append(("⚠️", "Demand Variability", f"CV {cv:.2f} High; may cause Supply Chain volatility"))
+                        validation_results.append(("[WARN]", "Demand Variability", f"CV {cv:.2f} High; may cause Supply Chain volatility"))
                     elif cv < 0.1:
-                        validation_results.append(("ℹ️", "Demand Variability", f"CV {cv:.2f} Low; Demand is relatively stable"))
+                        validation_results.append(("[INFO]", "Demand Variability", f"CV {cv:.2f} Low; Demand is relatively stable"))
                     else:
-                        validation_results.append(("✅", "Demand Variability", f"CV {cv:.2f} Moderate"))
+                        validation_results.append(("[OK]", "Demand Variability", f"CV {cv:.2f} Moderate"))
                     
                     # Check Demand Trend
                     if len(preview_demands) > 10:
@@ -599,9 +626,9 @@ class StreamlitBeerGameApp:
                         slope, _, r_value, p_value, _ = stats.linregress(range(len(preview_demands)), preview_demands)
                         if abs(slope) > 0.1 and p_value < 0.05:
                             trend_direction = "Rising" if slope > 0 else "Falling"
-                            validation_results.append(("ℹ️", "Demand Trend", f"Detected significant{trend_direction} trend (slope: {slope:.3f})"))
+                            validation_results.append(("[INFO]", "Demand Trend", f"Detected significant{trend_direction} trend (slope: {slope:.3f})"))
                         else:
-                            validation_results.append(("✅", "Demand Trend", "No significant trend; Demand is relatively stable"))
+                            validation_results.append(("[OK]", "Demand Trend", "No significant trend; Demand is relatively stable"))
                     
                     # Volatile Demand Pattern - Special Validation
                     if demand_category == "Unstable Demand":
@@ -612,16 +639,16 @@ class StreamlitBeerGameApp:
                         st.write(f"{icon} **{title}**: {message}")
                     
                     # Suggestions
-                    st.subheader("💡 Config Suggestions")
+                    st.subheader("Config Suggestions")
                     
                     avg_demand = np.mean(preview_demands)
                     if avg_demand < 5:
-                        st.info("💡 Average demand is low. Suggestion: adjust initial inventory appropriately to avoid excessive inventory buildup.")
+                        st.info("Average demand is low. Suggestion: adjust initial inventory appropriately to avoid excessive inventory buildup.")
                     elif avg_demand > 20:
-                        st.info("💡 Average demand is high. Suggestion: increase initial inventory or shorten lead time.")
+                        st.info("Average demand is high. Suggestion: increase initial inventory or shorten lead time.")
                     
                     if cv > 0.8:
-                        st.warning("⚠️ Demand variability is high. Suggestion: enable information sharing to improve supply chain coordination.")
+                        st.warning("Demand variability is high. Suggestion: enable information sharing to improve supply chain coordination.")
                     
                     # Volatile Demand Pattern - Special Suggestions
                     if demand_category == "Unstable Demand":
@@ -632,24 +659,24 @@ class StreamlitBeerGameApp:
                     st.info("Please check if Demand Parameter Configuration is correct")
         
         # Lead Time Config
-        st.sidebar.header("⏰ Lead Time Config")
+        st.sidebar.header("Lead Time Config")
         
         # Order Lead Time (collapsible)
-        with st.sidebar.expander("📦 Order Lead Time", expanded=False):
+        with st.sidebar.expander("Order Lead Time", expanded=False):
             retailer_order_lead_time = st.slider("Retailer Order Lead Time", 0, 5, 0)
             wholesaler_order_lead_time = st.slider("Wholesaler Order Lead Time", 0, 5, 0)
             distributor_order_lead_time = st.slider("Distributor Order Lead Time", 0, 5, 0)
             manufacturer_order_lead_time = st.slider("Manufacturer Order Lead Time", 0, 5, 0)
         
         # Transport & Production Lead Time (collapsible)
-        with st.sidebar.expander("🚚 Transport & 🏭 Production Lead Time", expanded=False):
+        with st.sidebar.expander("Transport & Production Lead Time", expanded=False):
             retailer_transport_lead_time = st.slider("Retailer Transport Lead Time", 1, 5, 2)
             wholesaler_transport_lead_time = st.slider("Wholesaler Transport Lead Time", 1, 5, 2)
             distributor_transport_lead_time = st.slider("Distributor Transport Lead Time", 1, 5, 2)
             manufacturer_production_lead_time = st.slider("Manufacturer Production Lead Time", 1, 8, 2)
         
         # 📦 Initial Inventory& In-Transit Config
-        with st.sidebar.expander("📦 Initial Inventory & In-Transit", expanded=False):
+        with st.sidebar.expander("Initial Inventory & In-Transit", expanded=False):
             st.caption("Set initial Inventory and In-Transit Pipeline for each Role (Per-period arrival quantity, comma-separated). If length is insufficient, auto pad with 0 to effective Lead Time length.")
 
             retailer_initial_inventory = st.number_input("Retailer Initial Inventory", min_value=0, value=12, step=1)
@@ -684,7 +711,7 @@ class StreamlitBeerGameApp:
         
         # Cost Parameter
         # Cost Parameter Configuration
-        st.sidebar.header("💰 Cost Parameter Configuration")
+        st.sidebar.header("Cost Configuration")
         
         # Cost Setting Mode Selection
         cost_setting_mode = st.sidebar.radio(
@@ -711,14 +738,14 @@ class StreamlitBeerGameApp:
         
         # Define Participants Mapping
         participants = {
-            'retailer': '🏪 Retailer',
-            'wholesaler': '🏬 Wholesaler', 
-            'distributor': '🚚 Distributor',
-            'manufacturer': '🏭 Manufacturer'
+            'retailer': 'Retailer',
+            'wholesaler': 'Wholesaler',
+            'distributor': 'Distributor',
+            'manufacturer': 'Manufacturer'
         }
         
         if cost_setting_mode == "Unified Settings":
-            st.sidebar.subheader("📊 Unified Cost Parameters")
+            st.sidebar.subheader("Unified Cost Parameters")
             
             unified_holding = st.sidebar.slider(
                 "Inventory Holding Cost", 
@@ -748,10 +775,10 @@ class StreamlitBeerGameApp:
                 }
             
             # Display Application Info
-            st.sidebar.info("✅ Unified Parameters applied to all Participants")
+            st.sidebar.info("Unified parameters applied to all participants")
             
         else:  # Independent Settings
-            st.sidebar.subheader("🎯 Independent Cost Parameters")
+            st.sidebar.subheader("Independent Cost Parameters")
             
             # Set independent parameters for each participant
             for key, name in participants.items():
@@ -780,7 +807,7 @@ class StreamlitBeerGameApp:
         current_costs = st.session_state.cost_configs['individual']
         
         # Display Current Config Summary
-        with st.sidebar.expander("📋 Current Cost Config Summary", expanded=False):
+        with st.sidebar.expander("Current Cost Config Summary", expanded=False):
             for key, name in participants.items():
                 st.write(f"**{name}**")
                 st.write(f"- Holding: {current_costs[key]['holding_cost']:.1f}")
@@ -1063,46 +1090,46 @@ class StreamlitBeerGameApp:
             with col1:
                 share_inventory = st.sidebar.checkbox("Share Inventory Info", True)
             with col2:
-                if st.sidebar.button("ℹ️", key="info_inventory"):
+                if st.sidebar.button("?", key="info_inventory"):
                     st.sidebar.info("📘 **Share Inventory Info**: All Supply Chain Participants can see each other's Current Inventory levels. Helps understand upstream and downstream inventory status. Avoid excessive ordering.")
             
             col3, col4 = st.sidebar.columns([4, 1])
             with col3:
                 share_demand = st.sidebar.checkbox("Share Demand Info", True)
             with col4:
-                if st.sidebar.button("ℹ️", key="info_demand"):
+                if st.sidebar.button("?", key="info_demand"):
                     st.sidebar.info("📘 **Share Demand Info**: All Participants can access Retailer's terminal Customer Demand history. Let every stage see real market demand. Reduce information distortion.")
                 
             col5, col6 = st.sidebar.columns([4, 1])
             with col5:
                 share_orders = st.sidebar.checkbox("Share Order Info", False)
             with col6:
-                if st.sidebar.button("ℹ️", key="info_orders"):
+                if st.sidebar.button("?", key="info_orders"):
                     st.sidebar.info("📘 **Share Order Info**: Participants can see other stages' historical Order Data, helping understand Order patterns and trends, and optimize own decisions.")
             
             # Add detailed explanation expander
-            with st.sidebar.expander("📖 Detailed Strategy Description", expanded=False):
+            with st.sidebar.expander("Detailed Strategy Description", expanded=False):
                 st.markdown("""
                 ### Information Sharing Strategy Details
-                
+
                 When Information Sharing is enabled, you can select from the following three strategies:
-                
-                #### 1. 📦 Share Inventory Info
+
+                #### 1. Share Inventory Info
                 - **Content**: All Supply Chain Participants can see each other's Current Inventory levels
                 - **Purpose**: Helps participants understand upstream/downstream inventory status to avoid excessive ordering
                 - **Effect**: Reduces Bullwhip Effect, improves Supply Chain transparency
-                
-                #### 2. 📈 Share Demand Info
+
+                #### 2. Share Demand Info
                 - **Content**: All Participants can access Retailer's terminal Customer Demand history
                 - **Purpose**: Let every stage see real market demand to reduce information distortion
                 - **Effect**: Significantly reduces Bullwhip Effect, improves Demand Forecast Accuracy
-                
-                #### 3. 📋 Share Order Info
+
+                #### 3. Share Order Info
                 - **Content**: Participants can see other stages' historical Order Data
                 - **Purpose**: Helps understand Order patterns and trends to optimize own decisions
                 - **Effect**: Enhances Supply Chain Coordination, reduces Order Fluctuation
-                
-                ### 💡 Recommended Combinations
+
+                ### Recommended Combinations
                 - **Base Combination**: Share Inventory + Share Demand (default recommended)
                 - **Full Transparency**: All Three Strategies Enabled
                 - **Lightweight Mode**: Only Share Demand Info
@@ -1110,9 +1137,9 @@ class StreamlitBeerGameApp:
         
 
         # Order Quantity Limit Config
-        with st.sidebar.expander("📊 Order Quantity Limit", expanded=False):
+        with st.sidebar.expander("Order Quantity Limits", expanded=False):
             # Per-role "No Decision Constraints" checkboxes
-            st.markdown("**🚫 No Decision Constraints (per-role):**")
+            st.markdown("**No Decision Constraints (per-role):**")
             st.caption("Remove constraint language from prompt for specific roles. Agent decides freely; system still clamps to [0, 1000].")
             retailer_no_constraints = st.checkbox(
                 "Retailer — no constraints",
@@ -2894,7 +2921,7 @@ class StreamlitBeerGameApp:
 
     def display_detailed_cost_analysis(self, result):
         """Display detailed cost analysis, including each participant's average cost per period and average total cost"""
-        st.markdown("### 💰 Detailed Cost Analysis")
+        st.markdown("### Detailed Cost Analysis")
         
         # Get total rounds
         total_rounds = len(getattr(result, 'round_history', []) or [])
@@ -2911,7 +2938,7 @@ class StreamlitBeerGameApp:
         
         # In columns, display each participant's detailed cost info
         with col1:
-            st.markdown("#### Each Participants Cost Details")
+            st.markdown("#### Each Participant Cost Details")
             
             # Calculate and display each participant's cost info
             for i, (role, name) in enumerate(zip(roles, role_names)):
@@ -2927,7 +2954,7 @@ class StreamlitBeerGameApp:
         
         # In Column 2 Display Overall Cost Info
         with col2:
-            st.markdown("#### Overall Cost Overview")
+            st.markdown("#### Overall Cost Summary")
             
             # Calculate Total Cost
             total_cost = result.total_cost
@@ -2950,7 +2977,8 @@ class StreamlitBeerGameApp:
                     cost_labels.append(f"{name} (${cost:.2f})")
             
             if cost_data:
-                fig_pie = go.Figure(data=[go.Pie(labels=cost_labels, values=cost_data)])
+                pie_colors = [self.role_colors[role] for role in roles if result.agent_costs.get(role, 0) > 0]
+                fig_pie = go.Figure(data=[go.Pie(labels=cost_labels, values=cost_data, marker=dict(colors=pie_colors))])
                 fig_pie.update_layout(title="Cost Breakdown Distribution")
                 st.plotly_chart(fig_pie, use_container_width=True)
         
@@ -2975,7 +3003,7 @@ class StreamlitBeerGameApp:
         # Add Download Button
         csv = df.to_csv(index=False, encoding='utf-8-sig')
         st.download_button(
-            label="📥 Download Cost Analysis Data",
+            label="Download Cost Analysis Data",
             data=csv,
             file_name="Cost Analysis Details.csv",
             mime="text/csv"
@@ -3008,7 +3036,7 @@ class StreamlitBeerGameApp:
             y=total_costs_per_round,
             mode='lines+markers',
             name='Per Round Total Cost',
-            line=dict(color='#FF6B6B', width=2),
+            line=dict(color='#2563EB', width=2),
             marker=dict(size=6)
         ))
         
@@ -3043,13 +3071,14 @@ class StreamlitBeerGameApp:
         # CV
         cv_roles = list(bullwhip_metrics.coefficient_of_variation.keys())
         cv_values = list(bullwhip_metrics.coefficient_of_variation.values())
-        
+        cv_colors = [self.role_colors.get(r, '#94A3B8') for r in cv_roles]
+
         fig.add_trace(
             go.Bar(
                 x=cv_roles,
                 y=cv_values,
                 name='CV',
-                marker_color='lightblue'
+                marker_color=cv_colors
             ),
             row=1, col=1
         )
@@ -3229,7 +3258,7 @@ class StreamlitBeerGameApp:
     
     def _display_order_limits_stats(self, result):
         """Display order limit statistics info"""
-        st.markdown("### 📊 Order Limit Statistics")
+        st.markdown("### Order Limit Statistics")
         
         # Check whether order limit is enabled
         order_limits_enabled = False
@@ -3248,7 +3277,7 @@ class StreamlitBeerGameApp:
                         roles_with_limits[role] = {'min': min_qty, 'max': max_qty}
         
         if not order_limits_enabled:
-            st.info("📝 This simulation does not have order limit features enabled.")
+            st.info("This simulation does not have order limit features enabled.")
             return
         
         # Statistics: Order Limit Application Status
@@ -3288,15 +3317,15 @@ class StreamlitBeerGameApp:
 
     def display_decision_statistics(self, result):
         """Display order decision statistics for all four participants"""
-        st.markdown("### 📊 Participants Order Decision Statistics Analysis")
+        st.markdown("### Participants Order Decision Statistics Analysis")
         st.markdown("""This analysis displays order decision patterns, compliance rates, and decision probability distributions for each participant, helping understand decision behavior characteristics across the supply chain.""")
         
         # Extract order decision data
         roles = {
-            'retailer': '🏪 Retailer',
-            'wholesaler': '🏢 Wholesaler', 
-            'distributor': '🚚 Distributor',
-            'manufacturer': '🏭 Manufacturer'
+            'retailer': 'Retailer',
+            'wholesaler': 'Wholesaler',
+            'distributor': 'Distributor',
+            'manufacturer': 'Manufacturer'
         }
         
         # Calculate Decision Statistics Data
@@ -3363,7 +3392,7 @@ class StreamlitBeerGameApp:
                    [{"secondary_y": True}, {"secondary_y": True}]]
         )
         
-        colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
+        colors = [self.role_colors[role] for role in decision_stats.keys()]
         
         for i, (role_key, stats) in enumerate(decision_stats.items()):
             row = (i // 2) + 1
@@ -3686,7 +3715,7 @@ class StreamlitBeerGameApp:
     def run_app(self):
         """Run Streamlit app"""
         self._inject_global_styles()
-        st.title("🍺 LLM Beer Game Simulation System")
+        st.title("LLM Beer Game — Supply Chain Simulation")
         st.markdown("---")
         
         # Render sidebar
@@ -3698,7 +3727,7 @@ class StreamlitBeerGameApp:
         # === Simulation Controls ===
         btn_col1, btn_col2, btn_col3 = st.columns([1, 2, 1])
         with btn_col2:
-            run_button = st.button("🚀 Start Simulation", type="primary")
+            run_button = st.button("Start Simulation", type="primary")
 
         # Feature toggles — hardcoded off, removed from UI per user request
         enable_realtime_3d = False
@@ -3706,7 +3735,7 @@ class StreamlitBeerGameApp:
 
         # Demand forecasting deduction mode (add-on checkbox)
         enable_demand_forecasting = st.checkbox(
-            "🔮 Enable Supply Chain Demand Forecasting Deduction",
+            "Enable Demand Forecasting Deduction",
             value=st.session_state.get("enable_demand_forecasting", False),
             help="When checked, appends demand forecasting deduction rules to the end of original prompts without modifying any existing prompt text"
         )
@@ -3714,7 +3743,7 @@ class StreamlitBeerGameApp:
 
         # === Config Preview ===
         st.markdown("---")
-        st.markdown("### 📋 Config Preview")
+        st.markdown("### Config Preview")
 
         demand_pattern = ui_config["demand_pattern"]
 
@@ -3722,15 +3751,15 @@ class StreamlitBeerGameApp:
         card_col1, card_col2, card_col3, card_col4 = st.columns(4)
 
         demand_label = demand_pattern.replace(" Demand", "")
-        card_col1.markdown(f"""<div class="metric-card" style="border-top:3px solid #1B3A5C;">
+        card_col1.markdown(f"""<div class="metric-card" style="border-top:3px solid #38BDF8;">
             <div class="label">Demand Type</div>
             <div class="value">{demand_label}</div></div>""", unsafe_allow_html=True)
 
-        card_col2.markdown(f"""<div class="metric-card" style="border-top:3px solid #0D9488;">
+        card_col2.markdown(f"""<div class="metric-card" style="border-top:3px solid #22C55E;">
             <div class="label">Rounds</div>
             <div class="value">{ui_config['num_rounds']}</div></div>""", unsafe_allow_html=True)
 
-        card_col3.markdown(f"""<div class="metric-card" style="border-top:3px solid #6366F1;">
+        card_col3.markdown(f"""<div class="metric-card" style="border-top:3px solid #A78BFA;">
             <div class="label">Random Seed</div>
             <div class="value">{ui_config['random_seed']}</div></div>""", unsafe_allow_html=True)
 
@@ -3743,7 +3772,7 @@ class StreamlitBeerGameApp:
 
         # --- Demand parameters card ---
         with st.container():
-            st.markdown("#### 📊 Demand Parameters")
+            st.markdown("#### Demand Parameters")
             dcol1, dcol2, dcol3 = st.columns(3)
 
             if demand_pattern == "Step Demand":
@@ -3788,13 +3817,13 @@ class StreamlitBeerGameApp:
                     st.metric("Type", demand_pattern)
 
         # Agent config summary
-        with st.expander("🏭 Supply Chain Agent Configuration", expanded=False):
+        with st.expander("Supply Chain Agent Configuration", expanded=False):
             agent_cols = st.columns(4)
             roles = [
-                ("retailer", "🏪 Retailer"),
-                ("wholesaler", "🏢 Wholesaler"),
-                ("distributor", "🚚 Distributor"),
-                ("manufacturer", "🏭 Manufacturer"),
+                ("retailer", "Retailer"),
+                ("wholesaler", "Wholesaler"),
+                ("distributor", "Distributor"),
+                ("manufacturer", "Manufacturer"),
             ]
             for i, (role_key, role_label) in enumerate(roles):
                 with agent_cols[i]:
@@ -3804,7 +3833,7 @@ class StreamlitBeerGameApp:
                     st.caption(f"Initial Inventory: {inv}")
                     st.caption(f"Initial Backorder: {bl}")
 
-        with st.expander("⚙️ View Full Config (JSON)", expanded=False):
+        with st.expander("View Full Config (JSON)", expanded=False):
             st.json(ui_config)
         
         # Run Simulation
@@ -3831,7 +3860,7 @@ class StreamlitBeerGameApp:
             with st.spinner("Running simulation..."):
                 # Create simulation progress display container
                 # st.markdown("---")
-                st.markdown("## 🎮 Simulation Progress")
+                st.markdown("## Simulation Progress")
                 progress_container = st.container()
                 
                 game_config = self.create_game_config(ui_config)
@@ -3877,9 +3906,9 @@ class StreamlitBeerGameApp:
             # Result Title and Save Button
             result_col1, result_col2 = st.columns([3, 1])
             with result_col1:
-                st.markdown("## 📈 Simulation Results")
+                st.markdown("## Simulation Results")
             with result_col2:
-                if st.button("💾 Save All Data", type="primary", help="Package all simulation data for download as ZIP file"):
+                if st.button("Save All Data", type="primary", help="Package all simulation data for download as ZIP file"):
                     with st.spinner("Packaging data..."):
                         zip_path, zip_filename = self.save_all_data(
                             st.session_state.result, 
@@ -3890,7 +3919,7 @@ class StreamlitBeerGameApp:
                         if zip_path and zip_filename:
                             with open(zip_path, 'rb') as f:
                                 st.download_button(
-                                    label=f"📥 Download {zip_filename}",
+                                    label=f"Download {zip_filename}",
                                     data=f.read(),
                                     file_name=zip_filename,
                                     mime="application/zip",
@@ -3904,11 +3933,11 @@ class StreamlitBeerGameApp:
             self.display_summary_metrics(st.session_state.result, st.session_state.bullwhip_metrics)
             
             # Chart display
-            tabs = ["🏢 3D Supply Chain", "📊 Inventory & Orders", "🚚 Shipment & Pipeline", "💰 Cost Analysis", "🔄 Bullwhip & Decision Stats"]
+            tabs = ["3D Supply Chain", "Inventory & Orders", "Shipment & Pipeline", "Cost Analysis", "Bullwhip & Decision Stats"]
 
             # If debug features enabled, add debug tab
             if ui_config.get('enable_prompt_debug', False):
-                tabs.append("🔧 Prompt Adjust / Debug")
+                tabs.append("Prompt Adjust / Debug")
 
             tab_objects = st.tabs(tabs)
             tab1, tab2, tab3, tab4, tab5 = tab_objects[:5]
@@ -3917,7 +3946,7 @@ class StreamlitBeerGameApp:
             debug_tab = tab_objects[5] if len(tab_objects) > 5 else None
 
             with tab1:
-                st.markdown("### 🏢 3D Supply Chain Dynamic Visualization")
+                st.markdown("### 3D Supply Chain Dynamic Visualization")
                 st.markdown("""This is an interactive 3D supply chain visualization that displays the dynamic process of order flow, inventory changes, and in-transit goods arrival between each role.
 
 **Feature Description:**
@@ -3945,13 +3974,13 @@ class StreamlitBeerGameApp:
                             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                             output_path = f"supply_chain_3d_{timestamp}.html"
                             visualizer_3d.save_html(st.session_state.result, output_path)
-                            st.success(f"✅ 3D visualization saved to: {output_path}")
+                            st.success(f"3D visualization saved to: {output_path}")
 
                     with col2:
-                        st.info("💡 Tip: Saved HTML files can be opened standalone in Browser, supporting full interactive features.")
+                        st.info("Tip: Saved HTML files can be opened standalone in Browser, supporting full interactive features.")
 
                 except Exception as e:
-                    st.error(f"❌ 3D visualization load failed: {str(e)}")
+                    st.error(f"3D visualization load failed: {str(e)}")
                     st.markdown("""**Possible Solutions:**
                     1. Ensure network connection is normal (need to load Three.js library)
                     2. Try refreshing the page
@@ -3959,22 +3988,22 @@ class StreamlitBeerGameApp:
                     """)
 
             with tab2:
-                st.markdown("### 📊 Inventory Level")
+                st.markdown("### Inventory Level")
                 fig = self.plot_inventory_levels(st.session_state.result)
                 st.plotly_chart(fig, use_container_width=True)
 
                 st.markdown("---")
-                st.markdown("### 📊 Combined Inventory & Demand")
+                st.markdown("### Combined Inventory & Demand")
                 fig_combined = self.plot_inventory_levels_combined(st.session_state.result)
                 st.plotly_chart(fig_combined, use_container_width=True)
 
                 st.markdown("---")
-                st.markdown("### 📈 Order & Demand")
+                st.markdown("### Order & Demand")
                 fig = self.plot_orders_and_demand(st.session_state.result)
                 st.plotly_chart(fig, use_container_width=True)
 
             with tab3:
-                st.markdown("### 🚚 Shipment Quantity by Participant")
+                st.markdown("### Shipment Quantity by Participant")
                 st.markdown("""This chart displays each stage's shipment quantity change trend, helping analyze each participant's shipment arrival capability and response mode.""")
 
                 visualizer = BeerGameVisualizer()
@@ -3982,7 +4011,7 @@ class StreamlitBeerGameApp:
                 st.plotly_chart(fig, use_container_width=True)
 
                 st.markdown("---")
-                st.markdown("### 🚢 In-Transit Inventory (Each Participant)")
+                st.markdown("### In-Transit Inventory (Each Participant)")
                 st.markdown("This chart displays each participant's in-transit inventory total amount per round, combined with next-period arrival info to help evaluate replenishment rhythm and supply chain response.")
                 fig_intransit = self.plot_in_transit_levels(st.session_state.result)
                 st.plotly_chart(fig_intransit, use_container_width=True)
@@ -3994,22 +4023,22 @@ class StreamlitBeerGameApp:
                 self.display_detailed_cost_analysis(st.session_state.result)
 
                 st.markdown("---")
-                st.markdown("### 📊 Per Round Total Cost (Sum of All Participants' Costs)")
+                st.markdown("### Per Round Total Cost")
                 fig_total_per_round = self.plot_total_cost_per_round(st.session_state.result)
                 st.plotly_chart(fig_total_per_round, use_container_width=True)
 
                 st.markdown("---")
-                st.markdown("### 📈 Each Participant Cost Trend (Per Round and Cumulative)")
+                st.markdown("### Each Participant Cost Trend (Per Round and Cumulative)")
                 fig_trends = self.plot_cost_trends(st.session_state.result)
                 st.plotly_chart(fig_trends, use_container_width=True)
 
             with tab5:
-                st.markdown("### 🔄 Bullwhip Effect")
+                st.markdown("### Bullwhip Effect")
                 fig = self.plot_bullwhip_effect(st.session_state.bullwhip_metrics)
                 st.plotly_chart(fig, use_container_width=True)
 
                 st.markdown("---")
-                st.markdown("### 🌊 Bullwhip Effect Detailed Trend (Order and Rolling CV)")
+                st.markdown("### Bullwhip Effect Detailed Trend (Order and Rolling CV)")
                 fig_bw_ts = self.plot_bullwhip_timeseries(st.session_state.result, window=5)
                 st.plotly_chart(fig_bw_ts, use_container_width=True)
 
@@ -4024,7 +4053,7 @@ class StreamlitBeerGameApp:
             # Detailed data
             with st.expander("View Detailed Data", expanded=False):
                 # Demand info display
-                st.markdown("### 📊 Full Period Demand Info")
+                st.markdown("### Full Period Demand Info")
                 demand_data = pd.DataFrame([
                     {
                         "Round": int(round_data['round']),
@@ -4052,7 +4081,7 @@ class StreamlitBeerGameApp:
                 }
 
                 # Add prompt tab
-                tab_names = [f"📦 {name}" for name in roles.values()] + ["💬 Prompt"]
+                tab_names = list(roles.values()) + ["Prompt"]
                 tabs = st.tabs(tab_names)
 
                 # Role data tabs
@@ -4138,7 +4167,7 @@ class StreamlitBeerGameApp:
                         csv = role_data.to_csv(index=False, encoding='utf-8-sig')
                         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                         st.download_button(
-                            label=f"📥 Download {role_name} Data",
+                            label=f"Download {role_name} Data",
                             data=csv,
                             file_name=f"{role_name}_OperationsData_{timestamp}.csv",
                             mime="text/csv"
@@ -4146,7 +4175,7 @@ class StreamlitBeerGameApp:
                 
                 # Prompt tab
                 with tabs[len(roles)]:
-                    st.markdown("### 💬 Per Round Prompt Details")
+                    st.markdown("### Per Round Prompt Details")
                     st.markdown("View each participant's complete prompt content for each round")
 
                     # Round selector
@@ -4247,7 +4276,7 @@ Decision Explanation:
 
                                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                                 st.download_button(
-                                    label="📥 Download Prompt and Decision Explanation",
+                                    label="Download Prompt and Decision Explanation",
                                     data=prompt_text,
                                     file_name=f"Prompt_Decision_Explanation_Round_{selected_round}_{role_names_map.get(selected_role, selected_role)}_{timestamp}.txt",
                                     mime="text/plain"
@@ -4259,13 +4288,13 @@ Decision Explanation:
     
     def show_example_results_loader(self):
         """Display example result load interface"""
-        st.title("📊 Load History Simulation Results")
+        st.title("Load History Simulation Results")
         st.markdown("---")
         
         # Return button
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
-            if st.button("⬅️ Return to Main Interface", type="secondary"):
+            if st.button("Return to Main Interface", type="secondary"):
                 st.session_state.show_example = False
                 st.rerun()
         
@@ -4273,7 +4302,7 @@ Decision Explanation:
         history_files = self.scan_history_files()
         
         if not history_files:
-            st.warning("📁 No history simulation result files found")
+            st.warning("No history simulation result files found")
             st.markdown("""
             **Possible reasons:**
             - No simulation has been run yet
@@ -4286,7 +4315,7 @@ Decision Explanation:
             """)
             return
         
-        st.success(f"🎉 Found {len(history_files)} historical simulation result files")
+        st.success(f"Found {len(history_files)} historical simulation result files")
         
         # File selection
         st.markdown("### 📋 Select Simulation Results to Load")
@@ -4319,17 +4348,17 @@ Decision Explanation:
                 st.metric("File Size", selected_file['file_size'])
             
             # Load button
-            if st.button("🚀 Load this Simulation Result", type="primary"):
+            if st.button("Load this Simulation Result", type="primary"):
                 with st.spinner("Loading simulation results..."):
                     success = self.load_simulation_result(selected_file['filepath'])
 
                     if success:
-                        st.success("✅ Simulation result loaded successfully!")
+                        st.success("Simulation result loaded successfully!")
                         st.session_state.show_example = False
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("❌ Failed to load simulation result. Please check the file format.")
+                        st.error("Failed to load simulation result. Please check the file format.")
     
     def scan_history_files(self):
         """Scan history simulation results files"""
@@ -4416,7 +4445,7 @@ Decision Explanation:
 
             elif 'run' in data and 'timestamp' in data and len(data) <= 3:
                 # Simplified format file with only basic info
-                st.warning("⚠️ This is a simplified simulation record file and does not contain complete simulation data.")
+                st.warning("This is a simplified simulation record file and does not contain complete simulation data.")
                 st.info("""**File Info:**
                 - Run #: {}
                 - Timestamp: {}
@@ -4427,7 +4456,7 @@ Decision Explanation:
                 return False
 
             else:
-                st.error("❌ Unsupported file format")
+                st.error("Unsupported file format")
                 st.info("""**Supported file formats:**
                 - Standard simulation results file containing `round_history`
                 - Demo format file containing `results` and `bullwhip_metrics`
@@ -4521,7 +4550,7 @@ Decision Explanation:
         st.markdown("This panel allows you to view and edit prompts used by each role in each round, to adjust and optimize decision logic.")
         
         if not hasattr(result, 'round_history') or not result.round_history:
-            st.info("ℹ️ Please run a simulation first to generate prompt data.")
+            st.info("Please run a simulation first to generate prompt data.")
             st.markdown("""
             **Usage Instructions:**
             1. Configure simulation parameters in the left sidebar
@@ -4568,7 +4597,7 @@ Decision Explanation:
         
         # Check whether prompt data exists
         if selected_role not in round_data.get('agents', {}):
-            st.warning(f"⚠️ Round {selected_round} has no data for {role_name_map[selected_role]}")
+            st.warning(f"Round {selected_round} has no data for {role_name_map[selected_role]}")
             return
         
         agent_data = round_data['agents'][selected_role]
@@ -4593,7 +4622,7 @@ Decision Explanation:
             prompt_data = agent_data['prompt_info']
         
         if not prompt_data:
-            st.info("ℹ️ No prompt info recorded for this round (possibly rule-based or data not saved)")
+            st.info("No prompt info recorded for this round (possibly rule-based or data not saved)")
             return
         
         # System prompt
@@ -4607,7 +4636,7 @@ Decision Explanation:
                     key=f"edit_system_prompt_{selected_round}_{selected_role}"
                 )
                 if st.button(f"💾 Save System Prompt Changes", key=f"save_system_{selected_round}_{selected_role}"):
-                    st.success("✅ System prompt changes saved (note: this is display only and will not affect the completed simulation)")
+                    st.success("System prompt changes saved (note: this is display only and will not affect the completed simulation)")
             else:
                 st.code(system_prompt, language="text")
         
@@ -4622,7 +4651,7 @@ Decision Explanation:
                     key=f"edit_user_prompt_{selected_round}_{selected_role}"
                 )
                 if st.button(f"💾 Save User Prompt Changes", key=f"save_user_{selected_round}_{selected_role}"):
-                    st.success("✅ User prompt changes saved (note: this is display only and will not affect the completed simulation)")
+                    st.success("User prompt changes saved (note: this is display only and will not affect the completed simulation)")
             else:
                 st.code(user_prompt, language="text")
         
@@ -4640,7 +4669,7 @@ Decision Explanation:
         if ui_config.get('debug_realtime', False):
             st.markdown("---")
             st.markdown("##### ⚡ Real-time Debug Features")
-            st.info("💡 Real-time debug features already enabled. Prompt info will be displayed during simulation.")
+            st.info("Real-time debug features already enabled. Prompt info will be displayed during simulation.")
             
             # Here you can add real-time adjustment related features
             if st.button("🔄 Refresh Current Data", key=f"refresh_{selected_round}_{selected_role}"):
@@ -4662,7 +4691,7 @@ Decision Explanation:
                 import json
                 json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
                 st.download_button(
-                    label="💾 DownloadJSONFile",
+                    label="Download JSON File",
                     data=json_str,
                     file_name=f"prompt_debug_{role_name_map[selected_role]}_round{selected_round}.json",
                     mime="application/json"
@@ -4688,13 +4717,13 @@ Decision Explanation:
                     import json
                     json_str = json.dumps(all_prompts, ensure_ascii=False, indent=2)
                     st.download_button(
-                        label="💾 Download Complete JSON File",
+                        label="Download Complete JSON File",
                         data=json_str,
                         file_name=f"all_prompts_{role_name_map[selected_role]}.json",
                         mime="application/json"
                     )
                 else:
-                    st.warning("⚠️ No prompt data found")
+                    st.warning("No prompt data found")
     
     def _validate_unstable_demand_params(self, demand_type: str, preview_demands: list) -> list:
         """Validate volatile demand pattern parameters"""
@@ -4706,11 +4735,11 @@ Decision Explanation:
                 autocorr = np.corrcoef(preview_demands[:-1], preview_demands[1:])[0, 1]
                 if not np.isnan(autocorr):
                     if autocorr > 0.7:
-                        validation_results.append(("⚠️", "Autocorrelation", f"Autocorrelation coefficient {autocorr:.3f} is too high, may lead to over-smoothing"))
+                        validation_results.append(("[WARN]", "Autocorrelation", f"Autocorrelation coefficient {autocorr:.3f} is too high, may lead to over-smoothing"))
                     elif autocorr < 0.1:
-                        validation_results.append(("ℹ️", "Autocorrelation", f"Autocorrelation coefficient {autocorr:.3f} is low, time dependency is not obvious"))
+                        validation_results.append(("[INFO]", "Autocorrelation", f"Autocorrelation coefficient {autocorr:.3f} is low, time dependency is not obvious"))
                     else:
-                        validation_results.append(("✅", "Autocorrelation", f"Autocorrelation coefficient {autocorr:.3f} is moderate"))
+                        validation_results.append(("[OK]", "Autocorrelation", f"Autocorrelation coefficient {autocorr:.3f} is moderate"))
         
         elif demand_type == "ARMA Demand":
             # Check ARMA model stability
@@ -4721,9 +4750,9 @@ Decision Explanation:
                 var_ratio = max(first_half_var, second_half_var) / min(first_half_var, second_half_var)
                 
                 if var_ratio > 3.0:
-                    validation_results.append(("⚠️", "Variance Stability", f"Before/after halves variance ratio {var_ratio:.2f} is too large, model is volatile"))
+                    validation_results.append(("[WARN]", "Variance Stability", f"Before/after halves variance ratio {var_ratio:.2f} is too large, model is volatile"))
                 else:
-                    validation_results.append(("✅", "Variance Stability", f"Before/after halves variance ratio {var_ratio:.2f} is stable"))
+                    validation_results.append(("[OK]", "Variance Stability", f"Before/after halves variance ratio {var_ratio:.2f} is stable"))
         
         elif demand_type == "Jump Diffusion":
             # Check jump frequency and magnitude
@@ -4734,11 +4763,11 @@ Decision Explanation:
                 jump_rate = jump_count / len(diffs)
                 
                 if jump_rate > 0.3:
-                    validation_results.append(("⚠️", "Jump Frequency", f"Jump frequency {jump_rate:.2%} is too high, demand is too volatile"))
+                    validation_results.append(("[WARN]", "Jump Frequency", f"Jump frequency {jump_rate:.2%} is too high, demand is too volatile"))
                 elif jump_rate < 0.05:
-                    validation_results.append(("ℹ️", "Jump Frequency", f"Jump frequency {jump_rate:.2%} is low, jump effect is not obvious"))
+                    validation_results.append(("[INFO]", "Jump Frequency", f"Jump frequency {jump_rate:.2%} is low, jump effect is not obvious"))
                 else:
-                    validation_results.append(("✅", "Jump Frequency", f"Jump frequency {jump_rate:.2%} is moderate"))
+                    validation_results.append(("[OK]", "Jump Frequency", f"Jump frequency {jump_rate:.2%} is moderate"))
         
         elif demand_type == "Poisson Jump":
             # Check jump discreteness
@@ -4748,9 +4777,9 @@ Decision Explanation:
                 diversity_ratio = unique_values / total_values
                 
                 if diversity_ratio < 0.3:
-                    validation_results.append(("ℹ️", "Value Diversity", f"Unique value ratio {diversity_ratio:.2%}, demand values are relatively concentrated"))
+                    validation_results.append(("[INFO]", "Value Diversity", f"Unique value ratio {diversity_ratio:.2%}, demand values are relatively concentrated"))
                 else:
-                    validation_results.append(("✅", "Value Diversity", f"Unique value ratio {diversity_ratio:.2%}, demand value distribution is reasonable"))
+                    validation_results.append(("[OK]", "Value Diversity", f"Unique value ratio {diversity_ratio:.2%}, demand value distribution is reasonable"))
         
         elif demand_type == "Regime Switching":
             # Check regime conversion detectability
@@ -4762,9 +4791,9 @@ Decision Explanation:
                 mean_diff = abs(second_half_mean - first_half_mean)
                 
                 if mean_diff > 3:
-                    validation_results.append(("✅", "Regime Switch", f"Detected obvious regime switch, mean difference {mean_diff:.2f}"))
+                    validation_results.append(("[OK]", "Regime Switch", f"Detected obvious regime switch, mean difference {mean_diff:.2f}"))
                 else:
-                    validation_results.append(("ℹ️", "Regime Switch", f"Regime switch is not obvious, mean difference {mean_diff:.2f}"))
+                    validation_results.append(("[INFO]", "Regime Switch", f"Regime switch is not obvious, mean difference {mean_diff:.2f}"))
         
         elif demand_type == "Volatility Clustering":
             # Check volatility clustering effect
@@ -4780,35 +4809,35 @@ Decision Explanation:
                     # Check volatility fluctuation
                     volatility_of_volatility = np.std(rolling_stds)
                     if volatility_of_volatility > 1.0:
-                        validation_results.append(("✅", "Volatility Clustering", f"Detected volatility clustering effect, volatility fluctuation {volatility_of_volatility:.2f}"))
+                        validation_results.append(("[OK]", "Volatility Clustering", f"Detected volatility clustering effect, volatility fluctuation {volatility_of_volatility:.2f}"))
                     else:
-                        validation_results.append(("ℹ️", "Volatility Clustering", f"Volatility clustering effect not evident, volatility fluctuation {volatility_of_volatility:.2f}"))
+                        validation_results.append(("[INFO]", "Volatility Clustering", f"Volatility clustering effect not evident, volatility fluctuation {volatility_of_volatility:.2f}"))
         
         return validation_results
     
     def _show_unstable_demand_suggestions(self, demand_type: str, avg_demand: float, cv: float):
         """Display volatile demand pattern special suggestions"""
         if demand_type == "Autoregressive":
-            st.info("💡 Autoregressive Suggestions: Consider using a relatively long history data window for forecasting. Enable Information Sharing to improve Forecast Accuracy.")
+            st.info("Autoregressive Suggestions: Consider using a relatively long history data window for forecasting. Enable Information Sharing to improve Forecast Accuracy.")
         
         elif demand_type == "ARMA Demand":
-            st.info("💡 ARMA Demand: This demand pattern combines historical trends and random shocks. We recommend using an adaptive order strategy.")
+            st.info("ARMA Demand: This demand pattern combines historical trends and random shocks. We recommend using an adaptive order strategy.")
         
         elif demand_type == "Jump Diffusion":
-            st.warning("⚠️ Jump Diffusion Warning: Demand may appear with sudden jumps. Suggest increasing safety inventory and enabling rapid response mechanisms.")
+            st.warning("Jump Diffusion Warning: Demand may appear with sudden jumps. Suggest increasing safety inventory and enabling rapid response mechanisms.")
         
         elif demand_type == "Poisson Jump":
-            st.info("💡 Poisson Jump: Demand jumps follow a Poisson process. We recommend using a probability-based inventory management strategy.")
+            st.info("Poisson Jump: Demand jumps follow a Poisson process. We recommend using a probability-based inventory management strategy.")
         
         elif demand_type == "Regime Switching":
-            st.warning("⚠️ Regime Switching Warning: Demand may switch between different states. We recommend using a multi-state forecasting model and flexible inventory strategy.")
+            st.warning("Regime Switching Warning: Demand may switch between different states. We recommend using a multi-state forecasting model and flexible inventory strategy.")
         
         elif demand_type == "Volatility Clustering":
-            st.info("💡 Volatility Clustering: Demand fluctuations tend to appear in clusters. We suggest increasing inventory buffer in high-fluctuation periods and optimizing costs in low-fluctuation periods.")
+            st.info("Volatility Clustering: Demand fluctuations tend to appear in clusters. We suggest increasing inventory buffer in high-fluctuation periods and optimizing costs in low-fluctuation periods.")
         
         # General suggestions
         if cv > 1.0:
-            st.warning("⚠️ Unstable Demand General Suggestions: CV is very high. Strongly suggest enabling Information Sharing to improve Supply Chain Stability.")
+            st.warning("Unstable Demand General Suggestions: CV is very high. Strongly suggest enabling Information Sharing to improve Supply Chain Stability.")
 
     def _show_unstable_demand_analysis(self, demand_pattern: str, preview_demands: list):
         """Display volatile demand pattern characteristics analysis"""

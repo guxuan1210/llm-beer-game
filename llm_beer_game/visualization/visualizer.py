@@ -39,12 +39,12 @@ class BeerGameVisualizer:
     def __init__(self, figsize: Tuple[int, int] = (12, 8)):
         self.figsize = figsize
         self.colors = {
-            'retailer': '#FF6B6B',
-            'wholesaler': '#4ECDC4', 
-            'distributor': '#45B7D1',
-            'manufacturer': '#96CEB4',
-            'demand': '#FECA57',
-            'cost': '#FF9FF3'
+            'retailer': '#EF4444',
+            'wholesaler': '#10B981',
+            'distributor': '#3B82F6',
+            'manufacturer': '#F59E0B',
+            'demand': '#A78BFA',
+            'cost': '#F43F5E'
         }
     
     def plot_inventory_levels(self, simulation_result, save_path: Optional[str] = None) -> None:
